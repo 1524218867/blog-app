@@ -81,12 +81,15 @@
                   <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
                 </view>
                 <view class="song-artist">{{ song.artist }}</view>
-              </view>
-            </view>
+          </view>
+          <view class="song-actions" @click.stop="deleteSong(song)">
+             <wd-icon name="delete" size="24px" color="#ef4444"></wd-icon>
           </view>
         </view>
+      </view>
+    </view>
 
-        <!-- Artist Group List -->
+    <!-- Artist Group List -->
          <view v-else class="artist-list">
            <view v-for="artist in artistGroups" :key="artist.id" class="artist-item" @click="selectArtist(artist)">
              <view class="artist-icon">
@@ -162,6 +165,9 @@
               <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
             </view>
             <view class="song-artist">{{ song.artist }}</view>
+          </view>
+          <view class="song-actions" @click.stop="deleteSong(song)">
+             <wd-icon name="delete" size="24px" color="#ef4444"></wd-icon>
           </view>
         </view>
         <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
@@ -242,16 +248,15 @@ const artistGroups = ref<any[]>([])
   }
 
   const switchTab = (tab: 'songs' | 'artists' | 'net') => {
+    // Clear search query when switching tabs to avoid empty views due to filtering
+    searchQuery.value = ''
     activeTab.value = tab
     selectedArtist.value = null
     if (tab === 'artists') {
       fetchArtistGroups()
     } else if (tab === 'net') {
-      if (searchQuery.value) {
-        searchNetMusic()
-      } else {
-        netSongs.value = []
-      }
+      // Net tab logic
+      netSongs.value = []
     } else {
       fetchSongs() // Refresh all songs when switching back
     }
@@ -364,7 +369,7 @@ const ensureSongDetails = async (song: Song) => {
 }
 
 const addToFavorites = async (song: Song) => {
-  uni.showLoading({ title: '添加中...' })
+  uni.showLoading({ title: '准备中...' })
   
   // 1. Ensure we have details (url, cover, etc.)
   const hasDetails = await ensureSongDetails(song)
@@ -374,22 +379,82 @@ const addToFavorites = async (song: Song) => {
     return
   }
   
-  // 2. Add to backend
+  // 2. Fetch available groups
+  let groups: any[] = []
   try {
-    await request('/audios/link', 'POST', {
-       url: song.url,
-       filename: song.name,
-       singer: song.artist,
-       cover: song.coverUrl,
-       lyrics: song.lyrics
-    })
-    uni.showToast({ title: '已加入我的音乐', icon: 'success' })
-  } catch (error) {
-    console.error('Add to favorites error:', error)
-    uni.showToast({ title: '添加失败', icon: 'none' })
-  } finally {
-    uni.hideLoading()
+    const data = await request('/audio-groups')
+    if (Array.isArray(data)) {
+      groups = data
+    }
+  } catch (e) {
+    console.error('Fetch groups failed', e)
   }
+  
+  uni.hideLoading()
+  
+  // 3. Show ActionSheet
+  const itemList = ['默认（未分组）', ...groups.map((g: any) => g.name)]
+  
+  uni.showActionSheet({
+    itemList,
+    success: async (res) => {
+      const index = res.tapIndex
+      let groupId = null
+      if (index > 0) {
+        groupId = groups[index - 1].id
+      }
+      
+      uni.showLoading({ title: '添加中...' })
+      try {
+        await request('/audios/link', 'POST', {
+           url: song.url,
+           filename: song.name,
+           singer: song.artist,
+           cover: song.coverUrl,
+           lyrics: song.lyrics,
+           group_id: groupId
+        })
+        uni.showToast({ title: '已加入我的音乐', icon: 'success' })
+      } catch (error) {
+        console.error('Add to favorites error:', error)
+        uni.showToast({ title: '添加失败', icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+    fail: (res) => {
+      console.log('ActionSheet failed/cancelled:', res.errMsg)
+    }
+  })
+}
+
+const deleteSong = async (song: Song) => {
+  uni.showModal({
+    title: '提示',
+    content: `确定要删除 "${song.name}" 吗？`,
+    success: async (res) => {
+      if (res.confirm) {
+        uni.showLoading({ title: '删除中...' })
+        try {
+          await request(`/audios/${song.id}`, 'DELETE')
+          uni.showToast({ title: '删除成功', icon: 'success' })
+          
+          // Remove from local lists
+          songs.value = songs.value.filter(s => s.id !== song.id)
+          artistSongs.value = artistSongs.value.filter(s => s.id !== song.id)
+          
+          // If currently playing song is deleted, maybe stop or next?
+          // For now, let's just leave it playing or let the user handle it.
+          
+        } catch (error) {
+          console.error('Delete song error:', error)
+          uni.showToast({ title: '删除失败', icon: 'none' })
+        } finally {
+          uni.hideLoading()
+        }
+      }
+    }
+  })
 }
 
 const playSong = async (song: Song) => {
