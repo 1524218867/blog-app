@@ -24,7 +24,7 @@
       </view>
 
       <!-- View Tabs -->
-      <view class="view-tabs" v-if="!searchQuery">
+      <view class="view-tabs">
         <view 
           class="tab-item" 
           :class="{ active: activeTab === 'songs' }"
@@ -38,6 +38,13 @@
           @click="switchTab('artists')"
         >
           歌手
+        </view>
+        <view 
+          class="tab-item" 
+          :class="{ active: activeTab === 'net' }"
+          @click="switchTab('net')"
+        >
+          全网
         </view>
       </view>
       
@@ -95,6 +102,40 @@
          </view>
       </view>
 
+      <!-- Net Songs List -->
+      <view v-else-if="activeTab === 'net'" class="music-list">
+        <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="playSong(song)">
+          <view class="song-index">
+            <text>{{ index + 1 }}</text>
+          </view>
+          <view class="song-cover">
+             <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
+             <view v-else class="cover-placeholder">
+               <wd-icon name="music" size="20px" color="#cbd5e1" />
+             </view>
+             <!-- Playing Overlay & Animation -->
+             <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
+               <view class="playing-icon-css">
+                 <view class="line line1"></view>
+                 <view class="line line2"></view>
+                 <view class="line line3"></view>
+                 <view class="line line4"></view>
+               </view>
+             </view>
+          </view>
+          <view class="song-info">
+            <view class="name-row">
+              <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
+            </view>
+            <view class="song-artist">{{ song.artist }}</view>
+          </view>
+          <view class="song-actions" @click.stop="addToFavorites(song)">
+             <wd-icon name="add-circle" size="24px" color="#3b5bdb"></wd-icon>
+          </view>
+        </view>
+        <view v-if="netSongs.length === 0" class="empty-tip">{{ searchQuery ? '未找到相关音乐' : '请输入歌名进行搜索' }}</view>
+      </view>
+
       <!-- All Songs List (Default) -->
       <view v-else class="music-list">
         <view v-for="(song, index) in songs" :key="song.id" class="song-item" @click="playSong(song)">
@@ -141,11 +182,14 @@ interface Song {
   url: string
   coverUrl?: string
   lyrics?: string
+  n?: number
+  sourceQuery?: string
 }
 
 const songs = ref<Song[]>([])
+const netSongs = ref<Song[]>([])
 const searchQuery = ref('')
-const activeTab = ref<'songs' | 'artists'>('songs')
+const activeTab = ref<'songs' | 'artists' | 'net'>('songs')
 const selectedArtist = ref<string | null>(null)
 let searchTimer: any = null
 
@@ -197,11 +241,17 @@ const artistGroups = ref<any[]>([])
     }
   }
 
-  const switchTab = (tab: 'songs' | 'artists') => {
+  const switchTab = (tab: 'songs' | 'artists' | 'net') => {
     activeTab.value = tab
     selectedArtist.value = null
     if (tab === 'artists') {
       fetchArtistGroups()
+    } else if (tab === 'net') {
+      if (searchQuery.value) {
+        searchNetMusic()
+      } else {
+        netSongs.value = []
+      }
     } else {
       fetchSongs() // Refresh all songs when switching back
     }
@@ -211,6 +261,47 @@ const artistGroups = ref<any[]>([])
     selectedArtist.value = artistGroup.name
     fetchSongsByGroup(artistGroup.id)
   }
+
+const searchNetMusic = async () => {
+  if (!searchQuery.value.trim()) return
+  
+  uni.showLoading({ title: '搜索中...' })
+  try {
+    const res: any = await new Promise((resolve, reject) => {
+      uni.request({
+        url: 'http://lpz.chatc.vip/apiqq.php',
+        method: 'GET',
+        data: {
+          msg: searchQuery.value,
+          type: 'json'
+        },
+        success: (res) => resolve(res.data),
+        fail: (err) => reject(err)
+      })
+    })
+
+    if (res.code === 200 && Array.isArray(res.data)) {
+      netSongs.value = res.data.map((item: any) => ({
+        id: Date.now() + item.n, // Generate a temporary unique ID
+        name: item.song_title,
+        artist: item.song_singer,
+        url: '', // Empty initially
+        coverUrl: '', // Empty initially
+        lyrics: '',
+        n: item.n,
+        sourceQuery: searchQuery.value
+      }))
+    } else {
+      uni.showToast({ title: '未找到歌曲', icon: 'none' })
+      netSongs.value = []
+    }
+  } catch (error) {
+    console.error('Net search error:', error)
+    uni.showToast({ title: '搜索失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+  }
+}
 
 const fetchSongs = async () => {
   try {
@@ -233,16 +324,94 @@ const fetchSongs = async () => {
 const handleSearchInput = () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
-    fetchSongs()
+    if (activeTab.value === 'net') {
+      searchNetMusic()
+    } else {
+      fetchSongs()
+    }
   }, 500)
 }
 
-const playSong = (song: Song) => {
+const ensureSongDetails = async (song: Song) => {
+  if (song.url) return true
+  if (!song.n) return false
+  
+  try {
+    const res: any = await new Promise((resolve, reject) => {
+      uni.request({
+        url: 'http://lpz.chatc.vip/apiqq.php',
+        method: 'GET',
+        data: {
+          msg: song.sourceQuery,
+          n: song.n,
+          type: 'json'
+        },
+        success: (res) => resolve(res.data),
+        fail: (err) => reject(err)
+      })
+    })
+
+    if (res.code === 200 && res.data) {
+      song.url = res.data.music_url
+      song.coverUrl = res.data.cover
+      song.lyrics = res.data.lyric
+      return true
+    }
+  } catch (e) {
+    console.error('Fetch details error:', e)
+  }
+  return false
+}
+
+const addToFavorites = async (song: Song) => {
+  uni.showLoading({ title: '添加中...' })
+  
+  // 1. Ensure we have details (url, cover, etc.)
+  const hasDetails = await ensureSongDetails(song)
+  if (!hasDetails) {
+    uni.hideLoading()
+    uni.showToast({ title: '获取歌曲信息失败', icon: 'none' })
+    return
+  }
+  
+  // 2. Add to backend
+  try {
+    await request('/audios/link', 'POST', {
+       url: song.url,
+       filename: song.name,
+       singer: song.artist,
+       cover: song.coverUrl,
+       lyrics: song.lyrics
+    })
+    uni.showToast({ title: '已加入我的音乐', icon: 'success' })
+  } catch (error) {
+    console.error('Add to favorites error:', error)
+    uni.showToast({ title: '添加失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+  }
+}
+
+const playSong = async (song: Song) => {
+  // Check if we need to fetch details (lazy load for net songs)
+  if (activeTab.value === 'net' && song.n && !song.url) {
+    uni.showLoading({ title: '获取播放地址...' })
+    const success = await ensureSongDetails(song)
+    uni.hideLoading()
+    
+    if (!success) {
+      uni.showToast({ title: '无法获取播放地址', icon: 'none' })
+      return
+    }
+  }
+
   // If in artist view, playlist should probably be just that artist's songs?
   // Or all songs? Usually context matters.
   // Let's set playlist to the currently visible list.
   if (activeTab.value === 'artists' && selectedArtist.value) {
     audioStore.setPlayList(artistSongs.value)
+  } else if (activeTab.value === 'net') {
+    audioStore.setPlayList(netSongs.value)
   } else if (searchQuery.value) {
      audioStore.setPlayList(songs.value) // Search results
   } else {
@@ -250,14 +419,18 @@ const playSong = (song: Song) => {
     audioStore.setPlayList(songs.value)
   }
   
-  audioStore.play(song)
-  audioStore.showFullScreen = true
+  if (song.url) {
+    audioStore.play(song)
+    audioStore.showFullScreen = true
+  }
 }
 
 const playAll = () => {
   let listToPlay: Song[] = []
   
-  if (searchQuery.value) {
+  if (activeTab.value === 'net') {
+    listToPlay = netSongs.value
+  } else if (searchQuery.value) {
     listToPlay = songs.value
   } else if (activeTab.value === 'artists') {
     if (selectedArtist.value) {
@@ -531,6 +704,9 @@ onMounted(() => {
 .song-artist {
   font-size: 24rpx;
   color: #94a3b8;
+}
+.song-actions {
+  padding: 0 16rpx;
 }
 .empty-tip {
   text-align: center;

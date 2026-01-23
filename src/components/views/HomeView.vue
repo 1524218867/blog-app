@@ -19,7 +19,10 @@
     <view v-if="user" class="card user-card">
       <view class="user-header">
         <view class="avatar-box">
-          <image src="/static/logo.png" mode="aspectFill" class="avatar" />
+          <image v-if="user.avatar" :src="user.avatar" mode="aspectFill" class="avatar" />
+          <view v-else class="avatar-placeholder">
+            <text class="avatar-text">{{ user.email ? user.email[0].toUpperCase() : 'U' }}</text>
+          </view>
         </view>
         <view class="user-info">
           <view class="user-name-row">
@@ -309,6 +312,19 @@ onMounted(() => {
 .avatar {
   width: 100%;
   height: 100%;
+}
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-text {
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: bold;
 }
 .user-info {
   flex: 1;

@@ -1,72 +1,74 @@
 <template>
-  <view class="content">
-    <view class="card">
-      <view class="section-header">
-        <view class="title">媒体库</view>
-        <view class="header-actions">
-          <view class="tabs">
-            <text :class="['tab', activeTab === 'all' ? 'active' : '']" @click="activeTab = 'all'">全部</text>
-            <text :class="['tab', activeTab === 'image' ? 'active' : '']" @click="activeTab = 'image'">图片</text>
-            <text :class="['tab', activeTab === 'video' ? 'active' : '']" @click="activeTab = 'video'">视频</text>
+  <view class="content-wrapper">
+    <view class="content">
+      <view class="card">
+        <view class="section-header">
+          <view class="title">媒体库</view>
+          <view class="header-actions">
+            <view class="tabs">
+              <text :class="['tab', activeTab === 'all' ? 'active' : '']" @click="activeTab = 'all'">全部</text>
+              <text :class="['tab', activeTab === 'image' ? 'active' : '']" @click="activeTab = 'image'">图片</text>
+              <text :class="['tab', activeTab === 'video' ? 'active' : '']" @click="activeTab = 'video'">视频</text>
+            </view>
           </view>
+        </view>
+
+        <!-- Search Box -->
+        <view class="search-box">
+          <input 
+            class="search-input" 
+            v-model="searchQuery" 
+            placeholder="搜索图片或视频..." 
+            confirm-type="search"
+            @confirm="fetchMedia"
+            @input="handleSearchInput"
+          />
+          <view class="search-icon">
+            <wd-icon name="search1" size="22px"></wd-icon>
+          </view>
+        </view>
+        
+        <view class="media-grid">
+          <view v-for="item in filteredMedia" :key="item.id + item.type" class="media-card" @click="handleMediaClick(item)" @longpress="handleLongPress(item)">
+            <view class="media-preview" :class="item.type">
+              <image 
+                v-if="item.type === 'image'" 
+                :src="item.fullUrl" 
+                mode="aspectFill" 
+                class="preview-image" 
+              />
+              <image 
+                v-else-if="item.type === 'video' && item.coverUrl" 
+                :src="item.coverUrl" 
+                mode="aspectFill" 
+                class="preview-image" 
+              />
+              <text v-else class="type-icon">{{ item.type === 'video' ? '▶' : '🖼' }}</text>
+            </view>
+            <view class="media-info">
+              <view class="media-title">{{ item.title }}</view>
+              <view class="media-meta">{{ item.date }} · {{ item.size }}</view>
+            </view>
+          </view>
+          <view v-if="filteredMedia.length === 0" class="empty-tip">未找到相关媒体</view>
         </view>
       </view>
 
-      <!-- Search Box -->
-      <view class="search-box">
-        <input 
-          class="search-input" 
-          v-model="searchQuery" 
-          placeholder="搜索图片或视频..." 
-          confirm-type="search"
-          @confirm="fetchMedia"
-          @input="handleSearchInput"
-        />
-        <view class="search-icon">
-          <wd-icon name="search1" size="22px"></wd-icon>
-        </view>
-      </view>
-      
-      <view class="media-grid">
-        <view v-for="item in filteredMedia" :key="item.id + item.type" class="media-card" @click="handleMediaClick(item)">
-          <view class="media-preview" :class="item.type">
-            <image 
-              v-if="item.type === 'image'" 
-              :src="item.fullUrl" 
-              mode="aspectFill" 
-              class="preview-image" 
-            />
-            <image 
-              v-else-if="item.type === 'video' && item.coverUrl" 
-              :src="item.coverUrl" 
-              mode="aspectFill" 
-              class="preview-image" 
-            />
-            <text v-else class="type-icon">{{ item.type === 'video' ? '▶' : '🖼' }}</text>
-          </view>
-          <view class="media-info">
-            <view class="media-title">{{ item.title }}</view>
-            <view class="media-meta">{{ item.date }} · {{ item.size }}</view>
-          </view>
-        </view>
-        <view v-if="filteredMedia.length === 0" class="empty-tip">未找到相关媒体</view>
-      </view>
+      <!-- Floating Action Button -->
+      <wd-fab 
+        :draggable="true" 
+        position="right-bottom" 
+        direction="top"
+        custom-style="top: 610px;"
+      >
+        <wd-button custom-class="fab-action-btn" type="primary" round @click="handleUploadImage">
+          <wd-icon name="image" size="22px"></wd-icon>
+        </wd-button>
+        <wd-button custom-class="fab-action-btn" type="success" round @click="handleUploadVideo">
+          <wd-icon name="video" size="22px"></wd-icon>
+        </wd-button>
+      </wd-fab>
     </view>
-
-    <!-- Floating Action Button -->
-    <wd-fab 
-      :draggable="true" 
-      position="right-bottom" 
-      direction="top"
-      custom-style="top: 610px;"
-    >
-      <wd-button custom-class="fab-action-btn" type="primary" round @click="handleUploadImage">
-        <wd-icon name="image" size="22px"></wd-icon>
-      </wd-button>
-      <wd-button custom-class="fab-action-btn" type="success" round @click="handleUploadVideo">
-        <wd-icon name="video" size="22px"></wd-icon>
-      </wd-button>
-    </wd-fab>
   </view>
 </template>
 
@@ -143,6 +145,29 @@ const handleMediaClick = (item: any) => {
       url: `/pages/media/video?url=${encodeURIComponent(item.fullUrl)}&title=${encodeURIComponent(item.title)}&cover=${encodeURIComponent(item.coverUrl || '')}`
     })
   }
+}
+
+const handleLongPress = (item: any) => {
+  uni.showModal({
+    title: '提示',
+    content: `确定要删除这个${item.type === 'image' ? '图片' : '视频'}吗？`,
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          uni.showLoading({ title: '删除中...' })
+          const endpoint = item.type === 'image' ? `/images/${item.id}` : `/videos/${item.id}`
+          await request(endpoint, 'DELETE')
+          uni.showToast({ title: '删除成功', icon: 'success' })
+          fetchMedia()
+        } catch (error) {
+          console.error('Failed to delete media:', error)
+          uni.showToast({ title: '删除失败', icon: 'none' })
+        } finally {
+          uni.hideLoading()
+        }
+      }
+    }
+  })
 }
 
 const handleUploadImage = () => {

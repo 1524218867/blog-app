@@ -1,13 +1,29 @@
 <template>
   <view class="page">
-    <keep-alive>
-      <component 
-        :is="currentViewComponent"
-        :user="user" 
-        @refresh="refreshMe" 
-        @logout="logout" 
-      />
-    </keep-alive>
+    <HomeView 
+      v-show="currentTab === 0"
+      :user="user" 
+      @refresh="refreshMe" 
+      @logout="logout" 
+    />
+    <ArticleView 
+      v-show="currentTab === 1"
+      :user="user" 
+      @refresh="refreshMe" 
+      @logout="logout" 
+    />
+    <MediaView 
+      v-show="currentTab === 2"
+      :user="user" 
+      @refresh="refreshMe" 
+      @logout="logout" 
+    />
+    <MusicView 
+      v-show="currentTab === 3"
+      :user="user" 
+      @refresh="refreshMe" 
+      @logout="logout" 
+    />
 
     <MiniPlayer />
     <FullPlayer />
@@ -16,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '@/utils/request'
 import CustomTabBar from '@/components/CustomTabBar.vue'
@@ -28,9 +44,6 @@ import MediaView from '@/components/views/MediaView.vue'
 import MusicView from '@/components/views/MusicView.vue'
 
 const currentTab = ref(0)
-const viewComponents = [HomeView, ArticleView, MediaView, MusicView]
-
-const currentViewComponent = computed(() => viewComponents[currentTab.value])
 
 const handleTabChange = (index: number) => {
   currentTab.value = index

@@ -1,0 +1,71 @@
+API概览
+本API仅供开发者测试和学习使用，请勿用于商业或违规用途。所有数据来源于网络，如有版权问题请联系删除。
+
+基本信息
+接口地址: http://lpz.chatc.vip/apiqq.php
+请求方式: GET
+返回格式: TEXT (可选JSON)
+
+请求参数
+参数名称	是否必填	参数说明
+msg 必填	是	歌曲名字
+n 选填	否	选择对应歌曲序号，为空则返回列表
+type 选填	否	返回格式，可填json，默认text
+num 选填	否	返回数量，默认20
+br 选填	否	1=默认最高音质，2=HQ高品MP3
+songid 选填	否	可用歌曲id直接解析
+songmid 选填	否	可用歌曲mid直接解析
+返回参数
+参数名称	参数说明
+code	状态码，200成功其它失败
+data.song_name	歌名
+data.song_singer	歌手
+data.quality	输出音质
+data.cover	歌曲封面
+data.link	歌曲详情页
+data.music_url	歌曲直链
+data.lyric	歌词内容
+使用示例
+cURL
+Python
+JavaScript
+PHP
+JavaScript
+async function searchMusic(songName) {
+const url = `http://lpz.chatc.vip/apiqq.php?msg=${encodeURIComponent(songName)}&type=json`;
+
+try {
+const response = await fetch(url);
+const data = await response.json();
+return data;
+} catch (error) {
+console.error('Error fetching music data:', error);
+return null;
+}
+}
+
+async function getSong(songName, index = 1, quality = 1) {
+const url = `http://lpz.chatc.vip/apiqq.php?msg=${encodeURIComponent(songName)}&n=${index}&br=${quality}&type=json`;
+
+try {
+const response = await fetch(url);
+const song = await response.json();
+return song;
+} catch (error) {
+console.error('Error fetching song:', error);
+return null;
+}
+}
+JSON返回示例
+{
+  "code": 200,
+  "data": {
+    "song_name": "平凡之路",
+    "song_singer": "朴树",
+    "quality": "无损",
+    "cover": "https://example.com/cover.jpg",
+    "link": "https://example.com/song/12345",
+    "music_url": "https://example.com/download/12345.flac",
+    "lyric": "歌词内容..."
+  }
+}

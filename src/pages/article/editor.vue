@@ -21,45 +21,44 @@
         :style="{ backgroundColor: bgColor }"
       />
       <view class="divider"></view>
-      <textarea 
-        class="content-input" 
-        v-model="content" 
+      <editor 
+        id="editor" 
+        class="content-editor" 
         placeholder="开始记录..." 
-        placeholder-class="placeholder"
-        maxlength="-1"
-        auto-height
-        :style="{ fontSize: fontSize + 'px', backgroundColor: bgColor }"
-      ></textarea>
+        show-img-size
+        show-img-toolbar
+        show-img-resize
+        @ready="onEditorReady"
+        @input="onEditorInput"
+        :style="{ backgroundColor: bgColor }"
+      ></editor>
     </view>
 
     <!-- Bottom Toolbar -->
     <view class="toolbar" :style="{ paddingBottom: safeAreaBottom + 'px', backgroundColor: bgColor }">
-      <view class="toolbar-item" @click="showFontPanel = !showFontPanel; showColorPanel = false">
-        <wd-icon name="text" size="20px" color="#666"></wd-icon>
-        <text class="toolbar-text">字号</text>
-      </view>
-      <view class="toolbar-item" @click="showColorPanel = !showColorPanel; showFontPanel = false">
-        <wd-icon name="fill" size="20px" color="#666"></wd-icon>
-        <text class="toolbar-text">背景</text>
-      </view>
-    </view>
-
-    <!-- Font Size Panel -->
-    <wd-popup v-model="showFontPanel" position="bottom" custom-style="padding: 20px;">
-      <view class="panel-title">字号大小</view>
-      <view class="font-options">
-        <view 
-          v-for="size in fontSizes" 
-          :key="size.value"
-          class="font-option"
-          :class="{ active: fontSize === size.value }"
-          @click="fontSize = size.value"
-        >
-          <text :style="{ fontSize: size.value + 'px' }">A</text>
-          <text class="font-label">{{ size.label }}</text>
+      <scroll-view scroll-x class="toolbar-scroll" :show-scrollbar="false">
+        <view class="toolbar-items">
+          <view class="toolbar-item" @click="format('header', 'H2')">
+            <wd-icon name="text" size="20px" color="#666"></wd-icon>
+          </view>
+          <view class="toolbar-item" @click="format('bold')">
+            <text class="icon-text" :class="{ active: formats.bold }">B</text>
+          </view>
+          <view class="toolbar-item" @click="format('italic')">
+            <text class="icon-text" :class="{ active: formats.italic }" style="font-style: italic;">I</text>
+          </view>
+          <view class="toolbar-item" @click="format('list', 'ordered')">
+            <wd-icon name="list" size="20px" color="#666"></wd-icon>
+          </view>
+          <view class="toolbar-item" @click="insertImage">
+            <wd-icon name="image" size="20px" color="#666"></wd-icon>
+          </view>
+          <view class="toolbar-item" @click="showColorPanel = !showColorPanel">
+            <wd-icon name="fill" size="20px" color="#666"></wd-icon>
+          </view>
         </view>
-      </view>
-    </wd-popup>
+      </scroll-view>
+    </view>
 
     <!-- Color Panel -->
     <wd-popup v-model="showColorPanel" position="bottom" custom-style="padding: 20px;">
@@ -77,21 +76,16 @@
         </view>
       </view>
     </wd-popup>
-
-    <!-- Loading Mask -->
-    <wd-toast id="wd-toast"></wd-toast>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { request } from '@/utils/request'
-import { useToast } from 'wot-design-uni'
+import { request, apiBase } from '@/utils/request'
 
 const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 20
 const safeAreaBottom = uni.getSystemInfoSync().safeAreaInsets?.bottom || 0
-const toast = useToast()
 
 const id = ref<string | null>(null)
 const title = ref('')
@@ -99,17 +93,10 @@ const content = ref('')
 const loading = ref(false)
 
 // Style Settings
-const showFontPanel = ref(false)
 const showColorPanel = ref(false)
-const fontSize = ref(17)
 const bgColor = ref('#ffffff')
-
-const fontSizes = [
-  { label: '小', value: 14 },
-  { label: '标准', value: 17 },
-  { label: '大', value: 20 },
-  { label: '超大', value: 24 }
-]
+const formats = reactive<any>({})
+let editorCtx: any = null
 
 const bgColors = [
   { label: '默认', value: '#ffffff' },
@@ -126,15 +113,87 @@ onLoad((options: any) => {
   }
 })
 
+const onEditorReady = () => {
+  uni.createSelectorQuery().select('#editor').context((res) => {
+    editorCtx = res.context
+    if (content.value) {
+      editorCtx.setContents({
+        html: content.value
+      })
+    }
+  }).exec()
+}
+
+const onEditorInput = (e: any) => {
+  content.value = e.detail.html
+}
+
+const format = (name: string, value?: string) => {
+  if (!editorCtx) return
+  editorCtx.format(name, value)
+}
+
+const onStatusChange = (e: any) => {
+  const formatsData = e.detail
+  Object.keys(formats).forEach(key => delete formats[key])
+  Object.assign(formats, formatsData)
+}
+
+const insertImage = () => {
+  uni.chooseImage({
+    count: 1,
+    success: async (res) => {
+      const tempFilePath = res.tempFilePaths[0]
+      uni.showLoading({ title: '上传中...' })
+      
+      try {
+        await new Promise((resolve, reject) => {
+          uni.uploadFile({
+            url: `${apiBase}/upload/image`,
+            filePath: tempFilePath,
+            name: 'file',
+            header: {
+              Authorization: `Bearer ${uni.getStorageSync('token')}`
+            },
+            success: (uploadRes) => {
+              const data = JSON.parse(uploadRes.data)
+              if (data.ok) {
+                editorCtx.insertImage({
+                  src: data.url.startsWith('http') ? data.url : `${apiBase}${data.url}`,
+                  alt: 'image',
+                  success: () => resolve(true)
+                })
+              } else {
+                reject(new Error(data.reason || 'Upload failed'))
+              }
+            },
+            fail: (err) => reject(err)
+          })
+        })
+      } catch (error) {
+        console.error('Image upload error:', error)
+        uni.showToast({ title: '图片上传失败', icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    }
+  })
+}
+
 const fetchDetail = async (articleId: string) => {
   try {
     loading.value = true
     const res: any = await request(`/articles/${articleId}`)
     title.value = res.title
     content.value = res.content || ''
+    if (editorCtx) {
+      editorCtx.setContents({
+        html: content.value
+      })
+    }
   } catch (error) {
     console.error('Fetch error:', error)
-    toast.error('加载失败')
+    uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
     loading.value = false
   }
@@ -146,7 +205,7 @@ const goBack = () => {
 
 const handleSave = async () => {
   if (!title.value.trim()) {
-    toast.warning('请输入标题')
+    uni.showToast({ title: '请输入标题', icon: 'none' })
     return
   }
   if (loading.value) return
@@ -169,10 +228,10 @@ const handleSave = async () => {
 
     if (id.value) {
       await request(`/articles/${id.value}`, 'PUT', payload)
-      toast.success('更新成功')
+      uni.showToast({ title: '更新成功', icon: 'success' })
     } else {
       await request('/articles', 'POST', payload)
-      toast.success('创建成功')
+      uni.showToast({ title: '创建成功', icon: 'success' })
     }
 
     // Notify list to refresh
@@ -183,7 +242,7 @@ const handleSave = async () => {
     }, 1000)
   } catch (error) {
     console.error('Save error:', error)
-    toast.error('保存失败')
+    uni.showToast({ title: '保存失败', icon: 'none' })
   } finally {
     loading.value = false
   }
@@ -251,12 +310,13 @@ const handleSave = async () => {
   margin-bottom: 16px;
 }
 
-.content-input {
+.content-editor {
   flex: 1;
   width: 100%;
   line-height: 1.6;
   color: #333;
   min-height: 300px;
+  font-size: 17px;
   transition: all 0.3s;
 }
 
@@ -273,18 +333,40 @@ const handleSave = async () => {
   height: 50px;
   display: flex;
   align-items: center;
-  justify-content: space-around;
   border-top: 1px solid #eee;
   z-index: 100;
   transition: background-color 0.3s;
 }
 
+.toolbar-scroll {
+  width: 100%;
+  height: 100%;
+}
+
+.toolbar-items {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 10px;
+}
+
 .toolbar-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 16px;
+  padding: 0 15px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.icon-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: #666;
+}
+
+.icon-text.active {
+  color: #3b82f6;
 }
 
 .toolbar-text {

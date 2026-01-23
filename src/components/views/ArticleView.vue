@@ -1,50 +1,52 @@
 <template>
-  <view class="content">
-    <view class="card">
-      <view class="section-header-row">
-        <view class="title">全部文章</view>
-      </view>
-      
-      <!-- Search Box -->
-      <view class="search-box">
-        <input 
-          class="search-input" 
-          v-model="searchQuery" 
-          placeholder="搜索文章标题或内容..." 
-          confirm-type="search"
-          @confirm="fetchPosts"
-          @input="handleSearchInput"
-        />
-        <view class="search-icon">
-          <wd-icon name="search1" size="22px"></wd-icon>
+  <view class="content-wrapper">
+    <view class="content">
+      <view class="card">
+        <view class="section-header-row">
+          <view class="title">全部文章</view>
         </view>
-      </view>
-
-      <view class="list">
-        <view v-for="post in posts" :key="post.id" class="list-item" @click="goDetail(post.id)">
-          <view class="post-content">
-            <view class="list-title">{{ post.title }}</view>
-            <view class="list-summary">{{ post.summary }}</view>
-            <view class="list-meta">{{ post.date }} · {{ post.author }}</view>
+        
+        <!-- Search Box -->
+        <view class="search-box">
+          <input 
+            class="search-input" 
+            v-model="searchQuery" 
+            placeholder="搜索文章标题或内容..." 
+            confirm-type="search"
+            @confirm="fetchPosts"
+            @input="handleSearchInput"
+          />
+          <view class="search-icon">
+            <wd-icon name="search1" size="22px"></wd-icon>
           </view>
-          <text class="chip">{{ post.tag }}</text>
         </view>
-        <view v-if="posts.length === 0" class="empty-tip">未找到相关文章</view>
+
+        <view class="list">
+          <view v-for="post in posts" :key="post.id" class="list-item" @click="goDetail(post.id)" @longpress="handleLongPress(post)">
+            <view class="post-content">
+              <view class="list-title">{{ post.title }}</view>
+              <view class="list-summary">{{ post.summary }}</view>
+              <view class="list-meta">{{ post.date }} · {{ post.author }}</view>
+            </view>
+            <text class="chip">{{ post.tag }}</text>
+          </view>
+          <view v-if="posts.length === 0" class="empty-tip">未找到相关文章</view>
+        </view>
       </view>
     </view>
-  </view>
 
-  <!-- Floating Action Button -->
-  <wd-fab 
-    :draggable="true" 
-    position="right-bottom" 
-    direction="top"
-    custom-style="top: 610px;"
-  >
-    <wd-button custom-class="fab-action-btn" type="primary" round @click="goEditor()">
-      <wd-icon name="add" size="22px"></wd-icon>
-    </wd-button>
-  </wd-fab>
+    <!-- Floating Action Button -->
+    <wd-fab 
+      :draggable="true" 
+      position="right-bottom" 
+      direction="top"
+      custom-style="top: 610px;"
+    >
+      <wd-button custom-class="fab-action-btn" type="primary" round @click="goEditor()">
+        <wd-icon name="add" size="22px"></wd-icon>
+      </wd-button>
+    </wd-fab>
+  </view>
 </template>
 
 <script setup lang="ts">
@@ -101,6 +103,30 @@ const handleSearchInput = () => {
 const goDetail = (id: number) => {
   uni.navigateTo({
     url: `/pages/article/editor?id=${id}`
+  })
+}
+
+const handleLongPress = (post: Post) => {
+  uni.showModal({
+    title: '提示',
+    content: `确定要删除文章《${post.title}》吗？`,
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          uni.showLoading({ title: '删除中...' })
+          await request(`/articles/${post.id}`, 'DELETE')
+          uni.showToast({ title: '删除成功', icon: 'success' })
+          fetchPosts()
+          // Emit event to refresh other components if needed
+          uni.$emit('refreshStats')
+        } catch (error) {
+          console.error('Failed to delete article:', error)
+          uni.showToast({ title: '删除失败', icon: 'none' })
+        } finally {
+          uni.hideLoading()
+        }
+      }
+    }
   })
 }
 
