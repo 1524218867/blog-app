@@ -14,10 +14,5 @@ declare module 'vue' {
     MediaView: typeof import('./src/components/views/MediaView.vue')['default']
     MiniPlayer: typeof import('./src/components/MiniPlayer.vue')['default']
     MusicView: typeof import('./src/components/views/MusicView.vue')['default']
-    WdButton: typeof import('wot-design-uni/components/wd-button/wd-button.vue')['default']
-    WdFab: typeof import('wot-design-uni/components/wd-fab/wd-fab.vue')['default']
-    WdIcon: typeof import('wot-design-uni/components/wd-icon/wd-icon.vue')['default']
-    WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']
-    WdToast: typeof import('wot-design-uni/components/wd-toast/wd-toast.vue')['default']
   }
 }
