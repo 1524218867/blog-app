@@ -4,7 +4,10 @@
       <view class="section-header">
         <view class="title">我的音乐</view>
         <view class="actions">
-          <text class="action-btn" @click="playAll">播放全部</text>
+          <text v-if="activeTab === 'net' && netSongs.length > 0" class="action-btn" @click="toggleSelectionMode">
+            {{ isSelectionMode ? '取消' : '批量管理' }}
+          </text>
+          <text v-else class="action-btn" @click="playAll">播放全部</text>
         </view>
       </view>
 
@@ -57,7 +60,7 @@
             <text class="artist-title">{{ selectedArtist }}</text>
           </view>
           <view class="music-list">
-             <view v-for="(song, index) in artistSongs" :key="song.id" class="song-item" @click="playSong(song)">
+             <view v-for="(song, index) in artistSongs" :key="song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
               <view class="song-index">
                 <text>{{ index + 1 }}</text>
               </view>
@@ -82,9 +85,6 @@
                 </view>
                 <view class="song-artist">{{ song.artist }}</view>
           </view>
-          <view class="song-actions" @click.stop="deleteSong(song)">
-             <wd-icon name="delete" size="24px" color="#ef4444"></wd-icon>
-          </view>
         </view>
       </view>
     </view>
@@ -106,8 +106,11 @@
       </view>
 
       <!-- Net Songs List -->
-      <view v-else-if="activeTab === 'net'" class="music-list">
-        <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="playSong(song)">
+      <view v-else-if="activeTab === 'net'" class="music-list" :class="{ 'selection-mode': isSelectionMode }">
+        <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="handleSongClick(song)">
+          <view v-if="isSelectionMode" class="checkbox-col" @click.stop="toggleSelection(song)">
+            <wd-icon :name="isSelected(song) ? 'check-circle-filled' : 'check-circle'" size="22px" :color="isSelected(song) ? '#3b5bdb' : '#cbd5e1'"></wd-icon>
+          </view>
           <view class="song-index">
             <text>{{ index + 1 }}</text>
           </view>
@@ -141,7 +144,7 @@
 
       <!-- All Songs List (Default) -->
       <view v-else class="music-list">
-        <view v-for="(song, index) in songs" :key="song.id" class="song-item" @click="playSong(song)">
+        <view v-for="(song, index) in songs" :key="song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
           <view class="song-index">
             <text>{{ index + 1 }}</text>
           </view>
@@ -166,11 +169,22 @@
             </view>
             <view class="song-artist">{{ song.artist }}</view>
           </view>
-          <view class="song-actions" @click.stop="deleteSong(song)">
-             <wd-icon name="delete" size="24px" color="#ef4444"></wd-icon>
-          </view>
         </view>
         <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
+      </view>
+    </view>
+
+    <!-- Batch Action Bar -->
+    <view v-if="isSelectionMode" class="batch-action-bar">
+      <view class="batch-left" @click="toggleSelectAll">
+        <wd-icon :name="selectedNetSongs.length > 0 && selectedNetSongs.length === netSongs.length ? 'check-circle-filled' : 'check-circle'" size="22px" :color="selectedNetSongs.length > 0 && selectedNetSongs.length === netSongs.length ? '#3b5bdb' : '#94a3b8'"></wd-icon>
+        <text class="select-all-text">全选</text>
+        <text class="selected-count">已选 {{ selectedNetSongs.length }} 首</text>
+      </view>
+      <view class="batch-right">
+        <view class="batch-btn confirm" :class="{ disabled: selectedNetSongs.length === 0 }" @click="batchAddToGroup">
+          加入分组
+        </view>
       </view>
     </view>
   </view>
@@ -197,6 +211,8 @@ const netSongs = ref<Song[]>([])
 const searchQuery = ref('')
 const activeTab = ref<'songs' | 'artists' | 'net'>('songs')
 const selectedArtist = ref<string | null>(null)
+const isSelectionMode = ref(false)
+const selectedNetSongs = ref<Song[]>([])
 let searchTimer: any = null
 
 const artistGroups = ref<any[]>([])
@@ -296,6 +312,9 @@ const searchNetMusic = async () => {
         n: item.n,
         sourceQuery: searchQuery.value
       }))
+      
+      // Automatically fetch details (covers) for all songs
+      fetchCoversForList()
     } else {
       uni.showToast({ title: '未找到歌曲', icon: 'none' })
       netSongs.value = []
@@ -305,6 +324,25 @@ const searchNetMusic = async () => {
     uni.showToast({ title: '搜索失败', icon: 'none' })
   } finally {
     uni.hideLoading()
+  }
+}
+
+const fetchCoversForList = async () => {
+  // Fetch details for each song to get cover image
+  // Use a small delay or concurrency control if needed, but for now simple iteration
+  // We don't await the loop because we want it to happen in background
+  const songsToFetch = [...netSongs.value]
+  for (const song of songsToFetch) {
+    // Check if song is still in the current list (user might have searched again)
+    if (!netSongs.value.find(s => s.id === song.id)) continue
+    
+    try {
+      await ensureSongDetails(song)
+      // Optional: delay to be gentle on the API
+      // await new Promise(resolve => setTimeout(resolve, 100))
+    } catch (e) {
+      console.error(e)
+    }
   }
 }
 
@@ -428,6 +466,18 @@ const addToFavorites = async (song: Song) => {
   })
 }
 
+const handleLongPress = (song: Song) => {
+  uni.showActionSheet({
+    itemList: ['删除'],
+    itemColor: '#ef4444',
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        deleteSong(song)
+      }
+    }
+  })
+}
+
 const deleteSong = async (song: Song) => {
   uni.showModal({
     title: '提示',
@@ -513,6 +563,151 @@ const playAll = () => {
     audioStore.play(listToPlay[0])
     audioStore.showFullScreen = true
   }
+}
+
+const toggleSelectionMode = () => {
+  isSelectionMode.value = !isSelectionMode.value
+  selectedNetSongs.value = []
+}
+
+const toggleSelection = (song: Song) => {
+  const index = selectedNetSongs.value.findIndex(s => s.id === song.id)
+  if (index > -1) {
+    selectedNetSongs.value.splice(index, 1)
+  } else {
+    selectedNetSongs.value.push(song)
+  }
+}
+
+const isSelected = (song: Song) => {
+  return selectedNetSongs.value.some(s => s.id === song.id)
+}
+
+const toggleSelectAll = () => {
+  if (selectedNetSongs.value.length === netSongs.value.length) {
+    selectedNetSongs.value = []
+  } else {
+    selectedNetSongs.value = [...netSongs.value]
+  }
+}
+
+const handleSongClick = (song: Song) => {
+  if (isSelectionMode.value) {
+    toggleSelection(song)
+  } else {
+    playSong(song)
+  }
+}
+
+const batchAddToGroup = async () => {
+  if (selectedNetSongs.value.length === 0) return
+
+  uni.showLoading({ title: '准备中...' })
+  
+  // Fetch available groups (reuse logic)
+  let groups: any[] = []
+  try {
+    const data = await request('/audio-groups')
+    if (Array.isArray(data)) {
+      groups = data
+    }
+  } catch (e) {
+    console.error('Fetch groups failed', e)
+  }
+  
+  uni.hideLoading()
+  
+  const itemList = ['默认（未分组）', ...groups.map((g: any) => g.name)]
+  
+  uni.showActionSheet({
+    itemList,
+    success: async (res) => {
+      const index = res.tapIndex
+      let groupId: number | null = null
+      if (index > 0) {
+        groupId = groups[index - 1].id
+      }
+      
+      await processBatchAdd(groupId)
+    }
+  })
+}
+
+const processBatchAdd = async (groupId: number | null) => {
+  uni.showLoading({ title: '处理中...', mask: true })
+  
+  // 1. Filter duplicates
+  // Refresh local songs to ensure up-to-date check
+  await fetchSongs()
+  const existingKeys = new Set(songs.value.map(s => `${s.name}-${s.artist}`))
+  
+  const songsToAdd = []
+  let duplicateCount = 0
+  
+  for (const song of selectedNetSongs.value) {
+    const key = `${song.name}-${song.artist}`
+    if (existingKeys.has(key)) {
+      duplicateCount++
+    } else {
+      songsToAdd.push(song)
+    }
+  }
+
+  if (songsToAdd.length === 0) {
+    uni.hideLoading()
+    uni.showToast({
+      title: `所有选中歌曲已存在 (${duplicateCount}首重复)`,
+      icon: 'none',
+      duration: 2000
+    })
+    isSelectionMode.value = false
+    selectedNetSongs.value = []
+    return
+  }
+
+  uni.showLoading({ title: `添加中(跳过${duplicateCount}首重复)...`, mask: true })
+  
+  let successCount = 0
+  let failCount = 0
+  
+  for (const song of songsToAdd) {
+    try {
+      // 2. Ensure details
+      const hasDetails = await ensureSongDetails(song)
+      if (!hasDetails) {
+        failCount++
+        continue
+      }
+      
+      // 3. Add
+      await request('/audios/link', 'POST', {
+           url: song.url,
+           filename: song.name,
+           singer: song.artist,
+           cover: song.coverUrl,
+           lyrics: song.lyrics,
+           group_id: groupId
+      })
+      successCount++
+    } catch (e) {
+      console.error(e)
+      failCount++
+    }
+  }
+  
+  uni.hideLoading()
+  uni.showToast({
+    title: `成功${successCount}，失败${failCount}，跳过重复${duplicateCount}`,
+    icon: 'none',
+    duration: 3000
+  })
+  
+  // Refresh list to show new songs if needed (though we are in net tab)
+  await fetchSongs()
+  
+  // Exit selection mode
+  isSelectionMode.value = false
+  selectedNetSongs.value = []
 }
 
 onMounted(() => {
@@ -778,5 +973,77 @@ onMounted(() => {
   color: #94a3b8;
   padding: 40rpx 0;
   font-size: 28rpx;
+}
+
+.music-list.selection-mode {
+  padding-bottom: calc(300rpx + env(safe-area-inset-bottom)); /* Ensure content is visible above floating bar */
+}
+
+.checkbox-col {
+  display: flex;
+  align-items: center;
+  margin-right: 24rpx;
+}
+
+.batch-action-bar {
+  position: fixed;
+  bottom: calc(180rpx + env(safe-area-inset-bottom)); /* Float above TabBar (approx 168rpx height) */
+  left: 24rpx;
+  right: 24rpx;
+  height: 110rpx;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32rpx;
+  z-index: 999;
+  /* Removed extra padding-bottom since it's floating */
+}
+
+.batch-left, .batch-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.batch-left {
+  gap: 16rpx;
+}
+
+.select-all-text {
+  font-size: 28rpx;
+  color: #1e293b;
+}
+
+.selected-count {
+  font-size: 24rpx;
+  color: #64748b;
+  margin-left: 12rpx;
+}
+
+.batch-btn {
+  padding: 16rpx 40rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.batch-btn:active {
+  opacity: 0.8;
+}
+
+.batch-btn.confirm {
+  background: #3b5bdb;
+  color: #ffffff;
+}
+
+.batch-btn.disabled {
+  background: #cbd5e1;
+  color: #f1f5f9;
+  pointer-events: none;
 }
 </style>

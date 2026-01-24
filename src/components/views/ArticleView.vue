@@ -102,7 +102,7 @@ const handleSearchInput = () => {
 
 const goDetail = (id: number) => {
   uni.navigateTo({
-    url: `/pages/article/editor?id=${id}`
+    url: `/pages/article/detail?id=${id}`
   })
 }
 

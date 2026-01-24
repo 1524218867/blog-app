@@ -22,6 +22,17 @@
       </view>
     </view>
     <view v-else class="error">文章不存在或已删除</view>
+
+    <!-- Edit FAB -->
+    <wd-fab 
+      :draggable="true" 
+      position="right-bottom" 
+      direction="top"
+    >
+      <wd-button custom-class="fab-action-btn" type="primary" round @click="goEditor">
+        <wd-icon name="edit" size="22px"></wd-icon>
+      </wd-button>
+    </wd-fab>
   </view>
 </template>
 
@@ -48,6 +59,14 @@ const fetchArticle = async (id: string) => {
     console.error('Failed to fetch article:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const goEditor = () => {
+  if (article.value?.id) {
+    uni.navigateTo({
+      url: `/pages/article/editor?id=${article.value.id}`
+    })
   }
 }
 
@@ -114,5 +133,18 @@ const processedContent = computed(() => {
   font-size: 30rpx;
   color: #334155;
   line-height: 1.8;
+}
+
+:deep(.fab-action-btn) {
+  min-width: auto !important;
+  box-sizing: border-box;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 </style>
