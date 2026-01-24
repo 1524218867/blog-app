@@ -47,8 +47,12 @@
         </view>
       </view>
 
-      <!-- 忘记密码 (仅登录模式) -->
+      <!-- 辅助选项 -->
       <view class="action-row" v-if="mode === 'login'">
+        <view class="remember-me" @click="rememberMe = !rememberMe">
+          <wd-icon :name="rememberMe ? 'check-circle-filled' : 'circle'" size="18px" :color="rememberMe ? '#0f172a' : '#94a3b8'" />
+          <text class="remember-text">记住我</text>
+        </view>
         <text class="forgot-text">忘记密码？</text>
       </view>
 
@@ -77,12 +81,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onLoad } from '@dcloudio/uni-app'
 import { request } from '@/utils/request'
 
 const mode = ref<'login' | 'register'>('login')
 const email = ref('')
 const password = ref('')
+const rememberMe = ref(true)
 const emailFocused = ref(false)
 const passwordFocused = ref(false)
 const loading = ref(false)
@@ -125,6 +130,12 @@ const handleSubmit = async () => {
       token.value = data.token
       uni.setStorageSync('token', token.value)
       
+      if (rememberMe.value) {
+        uni.setStorageSync('rememberMe', 'true')
+      } else {
+        uni.removeStorageSync('rememberMe')
+      }
+      
       showToast('登录成功', 'success')
       
       setTimeout(() => {
@@ -137,6 +148,32 @@ const handleSubmit = async () => {
     loading.value = false
   }
 }
+
+const autoLogin = async () => {
+  const storedToken = uni.getStorageSync('token')
+  const isRemembered = uni.getStorageSync('rememberMe') === 'true'
+
+  if (storedToken) {
+    if (isRemembered) {
+      loading.value = true
+      try {
+        await request('/auth/me')
+        uni.redirectTo({ url: '/pages/index/index' })
+      } catch (e) {
+        uni.removeStorageSync('token')
+        uni.removeStorageSync('rememberMe')
+      } finally {
+        loading.value = false
+      }
+    } else {
+      uni.removeStorageSync('token')
+    }
+  }
+}
+
+onLoad(() => {
+  autoLogin()
+})
 
 onShow(() => {
   // Logic on show
@@ -246,9 +283,21 @@ page {
 
 .action-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: -16rpx;
   margin-bottom: 48rpx;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.remember-text {
+  font-size: 28rpx;
+  color: #64748b;
 }
 
 .forgot-text {
