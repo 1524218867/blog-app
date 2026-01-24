@@ -51,6 +51,7 @@
           scroll-y 
           :scroll-top="scrollTop"
           scroll-with-animation
+          @scroll="onScroll"
           @click="showLyrics = false"
         >
           <view class="lyrics-wrapper">
@@ -152,18 +153,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, getCurrentInstance, nextTick } from 'vue'
 import { audioStore } from '@/store/audio'
 
+const instance = getCurrentInstance()
 const defaultCover = '/static/logo.png'
 const isSeeking = ref(false)
 const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 20
 const showLyrics = ref(false)
 const parsedLyrics = ref<{ time: number; text: string }[]>([])
 const scrollTop = ref(0)
+const currentScrollTop = ref(0)
 const showPlaylistPopup = ref(false)
 
 const isVisible = computed(() => audioStore.showFullScreen)
+
+const onScroll = (e: any) => {
+  currentScrollTop.value = e.detail.scrollTop
+}
+
+const scrollToCurrentLyric = () => {
+  if (!showLyrics.value || isSeeking.value || currentLyricIndex.value < 0) return
+  
+  // Use nextTick to ensure DOM is ready
+  nextTick(() => {
+    const query = uni.createSelectorQuery().in(instance)
+    query.select('.lyrics-area').boundingClientRect()
+    query.select(`#line-${currentLyricIndex.value}`).boundingClientRect()
+    
+    query.exec((res) => {
+      if (!Array.isArray(res) || res.length < 2) return
+      
+      let container = res[0]
+      let line = res[1]
+      
+      // Handle potential array wrapping
+      if (Array.isArray(container)) container = container[0]
+      if (Array.isArray(line)) line = line[0]
+      
+      if (!container || !container.height || !line) return
+      
+      const relativeTop = line.top - container.top
+      const target = currentScrollTop.value + relativeTop - (container.height / 2) + (line.height / 2)
+      
+      scrollTop.value = target
+    })
+  })
+}
 
 const goBack = () => {
   audioStore.showFullScreen = false
@@ -278,12 +314,18 @@ watch(() => audioStore.showFullScreen, (val) => {
 
 // Auto scroll lyrics
 watch(currentLyricIndex, (index) => {
-  if (index > 0 && showLyrics.value && !isSeeking.value) {
-    // Calculate scroll position: line height * index - offset to center
-    // Assuming each line is approx 60rpx + margin (let's say 40px height per line roughly)
-    // Better: just scroll to (index * 40) - viewport_half
-    // In uni-app pixels, let's estimate: 32px per line
-    scrollTop.value = index * 32 - 150 
+  if (index >= 0 && showLyrics.value && !isSeeking.value) {
+    scrollToCurrentLyric()
+  }
+})
+
+// Scroll to current lyric when switching to lyrics view
+watch(showLyrics, (val) => {
+  if (val) {
+    // Small delay to ensure rendering
+    setTimeout(() => {
+      scrollToCurrentLyric()
+    }, 100)
   }
 })
 </script>

@@ -144,7 +144,7 @@
 
       <!-- All Songs List (Default) -->
       <view v-else class="music-list">
-        <view v-for="(song, index) in songs" :key="song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
+        <view v-for="(song, index) in songs" :key="song.id" :id="'song-' + song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
           <view class="song-index">
             <text>{{ index + 1 }}</text>
           </view>
@@ -186,6 +186,15 @@
           加入分组
         </view>
       </view>
+    </view>
+
+    <!-- Locate Current Song FAB -->
+    <view 
+      v-if="activeTab === 'songs' && audioStore.currentSong" 
+      class="locate-fab"
+      @click="scrollToCurrentSong"
+    >
+      <image src="/static/miaodian.png" class="locate-icon" mode="aspectFit" />
     </view>
   </view>
 </template>
@@ -710,14 +719,53 @@ const processBatchAdd = async (groupId: number | null) => {
   selectedNetSongs.value = []
 }
 
+const scrollToCurrentSong = () => {
+  if (!audioStore.currentSong) return
+  const id = `song-${audioStore.currentSong.id}`
+  uni.pageScrollTo({
+    selector: `#${id}`,
+    duration: 300,
+    fail: () => {
+      uni.showToast({ title: '当前播放歌曲不在列表中', icon: 'none' })
+    }
+  })
+}
+
 onMounted(() => {
   fetchSongs()
 })
 </script>
 
 <style scoped>
+.locate-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 180px; /* Above the tab bar */
+  width: 36px;
+  height: 36px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 99;
+  transition: all 0.3s ease;
+}
+
+.locate-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.locate-fab:active {
+  transform: scale(0.9);
+  background-color: #f8fafc;
+}
+
 .content {
-  width: 100%;
+  padding: 16px;
+  padding-bottom: 100px; /* Add padding for bottom tab bar */
 }
 .card {
   background: #ffffff;
