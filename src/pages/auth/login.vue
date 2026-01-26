@@ -149,31 +149,7 @@ const handleSubmit = async () => {
   }
 }
 
-const autoLogin = async () => {
-  const storedToken = uni.getStorageSync('token')
-  const isRemembered = uni.getStorageSync('rememberMe') === 'true'
 
-  if (storedToken) {
-    if (isRemembered) {
-      loading.value = true
-      try {
-        await request('/auth/me')
-        uni.redirectTo({ url: '/pages/index/index' })
-      } catch (e) {
-        uni.removeStorageSync('token')
-        uni.removeStorageSync('rememberMe')
-      } finally {
-        loading.value = false
-      }
-    } else {
-      uni.removeStorageSync('token')
-    }
-  }
-}
-
-onLoad(() => {
-  autoLogin()
-})
 
 onShow(() => {
   // Logic on show

@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page" v-if="isReady">
     <HomeView 
       v-show="currentTab === 0"
       :user="user" 
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onLoad } from '@dcloudio/uni-app'
 import { request } from '@/utils/request'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import MiniPlayer from '@/components/MiniPlayer.vue'
@@ -44,6 +44,7 @@ import MediaView from '@/components/views/MediaView.vue'
 import MusicView from '@/components/views/MusicView.vue'
 
 const currentTab = ref(0)
+const isReady = ref(false)
 
 const handleTabChange = (index: number) => {
   currentTab.value = index
@@ -61,7 +62,8 @@ const refreshMe = async () => {
     const data = await request('/auth/me', 'GET')
     user.value = data.user
   } catch {
-    user.value = null
+    // Token 失效或网络错误
+    // 这里可以选择不强制登出，只在需要时处理
   }
 }
 
@@ -80,12 +82,29 @@ const logout = () => {
   goLogin()
 }
 
-onShow(() => {
-  if (!token.value) {
+const checkAuth = () => {
+  const storedToken = uni.getStorageSync('token')
+  if (!storedToken) {
     goLogin()
-    return
+  } else {
+    token.value = storedToken
+    isReady.value = true
+    refreshMe()
   }
-  refreshMe()
+}
+
+onLoad(() => {
+  checkAuth()
+})
+
+onShow(() => {
+  const storedToken = uni.getStorageSync('token')
+  if (!storedToken) {
+    goLogin()
+  } else if (isReady.value) {
+     // 如果已经 Ready 且有 Token，可以在这里做静默刷新或其他检查
+     // 但没必要每次都阻塞
+  }
 })
 </script>
 

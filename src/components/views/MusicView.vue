@@ -27,40 +27,10 @@
       </view>
 
       <!-- View Tabs -->
-      <view class="view-tabs">
-        <view 
-          class="tab-item" 
-          :class="{ active: activeTab === 'songs' }"
-          @click="switchTab('songs')"
-        >
-          单曲
-        </view>
-        <view 
-          class="tab-item" 
-          :class="{ active: activeTab === 'artists' }"
-          @click="switchTab('artists')"
-        >
-          歌手
-        </view>
-        <view 
-          class="tab-item" 
-          :class="{ active: activeTab === 'net' }"
-          @click="switchTab('net')"
-        >
-          全网
-        </view>
-      </view>
-      
-      <!-- Artist List -->
-      <view v-if="activeTab === 'artists' && !searchQuery" class="artist-view">
-        <!-- Artist Detail (Songs by Artist) -->
-        <view v-if="selectedArtist" class="artist-detail">
-          <view class="artist-header" @click="selectedArtist = null">
-            <wd-icon name="arrow-left" size="20px" color="#3b5bdb"></wd-icon>
-            <text class="artist-title">{{ selectedArtist }}</text>
-          </view>
+      <wd-tabs v-model="activeTab" swipeable animated @change="onTabChange">
+        <wd-tab title="单曲" name="songs">
           <view class="music-list">
-             <view v-for="(song, index) in artistSongs" :key="song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
+            <view v-for="(song, index) in songs" :key="song.id" :id="'song-' + song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
               <view class="song-index">
                 <text>{{ index + 1 }}</text>
               </view>
@@ -69,7 +39,121 @@
                  <view v-else class="cover-placeholder">
                    <wd-icon name="music" size="20px" color="#cbd5e1" />
                  </view>
-                 <!-- Playing Overlay & Animation -->
+                <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
+                  <view class="playing-icon-css">
+                    <view class="line line1"></view>
+                    <view class="line line2"></view>
+                    <view class="line line3"></view>
+                    <view class="line line4"></view>
+                  </view>
+                </view>
+              </view>
+              <view class="song-info">
+                <view class="name-row">
+                  <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
+                </view>
+                <view class="song-artist">{{ song.artist }}</view>
+              </view>
+            </view>
+            <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
+          </view>
+        </wd-tab>
+
+        <wd-tab title="歌手" name="artists">
+          <view v-if="!searchQuery" class="artist-view">
+            <view v-if="selectedArtist" class="artist-detail">
+              <view class="artist-header" @click="selectedArtist = null">
+                <wd-icon name="arrow-left" size="20px" color="#3b5bdb"></wd-icon>
+                <text class="artist-title">{{ selectedArtist }}</text>
+              </view>
+              <view class="music-list">
+                 <view v-for="(song, index) in artistSongs" :key="song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
+                  <view class="song-index">
+                    <text>{{ index + 1 }}</text>
+                  </view>
+                  <view class="song-cover">
+                     <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
+                     <view v-else class="cover-placeholder">
+                       <wd-icon name="music" size="20px" color="#cbd5e1" />
+                     </view>
+                     <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
+                       <view class="playing-icon-css">
+                         <view class="line line1"></view>
+                         <view class="line line2"></view>
+                         <view class="line line3"></view>
+                         <view class="line line4"></view>
+                       </view>
+                     </view>
+                  </view>
+                  <view class="song-info">
+                    <view class="name-row">
+                      <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
+                    </view>
+                    <view class="song-artist">{{ song.artist }}</view>
+                  </view>
+                </view>
+              </view>
+            </view>
+        
+            <view v-else class="artist-list">
+               <view v-for="artist in artistGroups" :key="artist.id" class="artist-item" @click="selectArtist(artist)">
+                 <view class="artist-icon">
+                   <image v-if="artist.cover" :src="artist.cover" mode="aspectFill" class="group-cover-img" />
+                   <wd-icon v-else name="user" size="24px" color="#fff"></wd-icon>
+                 </view>
+                 <view class="artist-info">
+                   <text class="artist-name">{{ artist.name }}</text>
+                   <text class="artist-count">{{ artist.count }} 首歌曲</text>
+                 </view>
+                 <wd-icon name="arrow-right" size="16px" color="#94a3b8"></wd-icon>
+               </view>
+             </view>
+          </view>
+          
+          <view v-else class="music-list">
+            <view v-for="(song, index) in songs" :key="song.id" :id="'song-' + song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
+              <view class="song-index">
+                <text>{{ index + 1 }}</text>
+              </view>
+              <view class="song-cover">
+                 <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
+                 <view v-else class="cover-placeholder">
+                   <wd-icon name="music" size="20px" color="#cbd5e1" />
+                 </view>
+                <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
+                  <view class="playing-icon-css">
+                    <view class="line line1"></view>
+                    <view class="line line2"></view>
+                    <view class="line line3"></view>
+                    <view class="line line4"></view>
+                  </view>
+                </view>
+              </view>
+              <view class="song-info">
+                <view class="name-row">
+                  <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
+                </view>
+                <view class="song-artist">{{ song.artist }}</view>
+              </view>
+            </view>
+            <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
+          </view>
+        </wd-tab>
+
+        <wd-tab title="全网" name="net">
+          <view class="music-list" :class="{ 'selection-mode': isSelectionMode }">
+            <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="handleSongClick(song)">
+              <view v-if="isSelectionMode" class="checkbox-col" @click.stop="toggleSelection(song)">
+                <wd-icon :name="isSelected(song) ? 'check-circle-filled' : 'check-circle'" size="22px" :color="isSelected(song) ? '#3b5bdb' : '#cbd5e1'"></wd-icon>
+              </view>
+              <view class="song-index">
+                <text>{{ index + 1 }}</text>
+              </view>
+              <view class="song-cover">
+                 <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
+                 <view v-else class="cover-placeholder">
+                   <wd-icon name="music" size="20px" color="#cbd5e1" />
+                 </view>
                  <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
                    <view class="playing-icon-css">
                      <view class="line line1"></view>
@@ -84,94 +168,15 @@
                   <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
                 </view>
                 <view class="song-artist">{{ song.artist }}</view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- Artist Group List -->
-         <view v-else class="artist-list">
-           <view v-for="artist in artistGroups" :key="artist.id" class="artist-item" @click="selectArtist(artist)">
-             <view class="artist-icon">
-               <image v-if="artist.cover" :src="artist.cover" mode="aspectFill" class="group-cover-img" />
-               <wd-icon v-else name="user" size="24px" color="#fff"></wd-icon>
-             </view>
-             <view class="artist-info">
-               <text class="artist-name">{{ artist.name }}</text>
-               <text class="artist-count">{{ artist.count }} 首歌曲</text>
-             </view>
-             <wd-icon name="arrow-right" size="16px" color="#94a3b8"></wd-icon>
-           </view>
-         </view>
-      </view>
-
-      <!-- Net Songs List -->
-      <view v-else-if="activeTab === 'net'" class="music-list" :class="{ 'selection-mode': isSelectionMode }">
-        <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="handleSongClick(song)">
-          <view v-if="isSelectionMode" class="checkbox-col" @click.stop="toggleSelection(song)">
-            <wd-icon :name="isSelected(song) ? 'check-circle-filled' : 'check-circle'" size="22px" :color="isSelected(song) ? '#3b5bdb' : '#cbd5e1'"></wd-icon>
-          </view>
-          <view class="song-index">
-            <text>{{ index + 1 }}</text>
-          </view>
-          <view class="song-cover">
-             <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
-             <view v-else class="cover-placeholder">
-               <wd-icon name="music" size="20px" color="#cbd5e1" />
-             </view>
-             <!-- Playing Overlay & Animation -->
-             <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
-               <view class="playing-icon-css">
-                 <view class="line line1"></view>
-                 <view class="line line2"></view>
-                 <view class="line line3"></view>
-                 <view class="line line4"></view>
-               </view>
-             </view>
-          </view>
-          <view class="song-info">
-            <view class="name-row">
-              <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
-            </view>
-            <view class="song-artist">{{ song.artist }}</view>
-          </view>
-          <view class="song-actions" @click.stop="addToFavorites(song)">
-             <wd-icon name="add-circle" size="24px" color="#3b5bdb"></wd-icon>
-          </view>
-        </view>
-        <view v-if="netSongs.length === 0" class="empty-tip">{{ searchQuery ? '未找到相关音乐' : '请输入歌名进行搜索' }}</view>
-      </view>
-
-      <!-- All Songs List (Default) -->
-      <view v-else class="music-list">
-        <view v-for="(song, index) in songs" :key="song.id" :id="'song-' + song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
-          <view class="song-index">
-            <text>{{ index + 1 }}</text>
-          </view>
-          <view class="song-cover">
-             <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
-             <view v-else class="cover-placeholder">
-               <wd-icon name="music" size="20px" color="#cbd5e1" />
-             </view>
-             <!-- Playing Overlay & Animation -->
-            <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
-              <view class="playing-icon-css">
-                <view class="line line1"></view>
-                <view class="line line2"></view>
-                <view class="line line3"></view>
-                <view class="line line4"></view>
+              </view>
+              <view class="song-actions" @click.stop="addToFavorites(song)">
+                 <wd-icon name="add-circle" size="24px" color="#3b5bdb"></wd-icon>
               </view>
             </view>
+            <view v-if="netSongs.length === 0" class="empty-tip">{{ searchQuery ? '未找到相关音乐' : '请输入歌名进行搜索' }}</view>
           </view>
-          <view class="song-info">
-            <view class="name-row">
-              <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
-            </view>
-            <view class="song-artist">{{ song.artist }}</view>
-          </view>
-        </view>
-        <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
-      </view>
+        </wd-tab>
+      </wd-tabs>
     </view>
 
     <!-- Batch Action Bar -->
@@ -290,6 +295,10 @@ const artistGroups = ref<any[]>([])
   const selectArtist = (artistGroup: any) => {
     selectedArtist.value = artistGroup.name
     fetchSongsByGroup(artistGroup.id)
+  }
+
+  const onTabChange = (e: { index: number, name: 'songs' | 'artists' | 'net' }) => {
+    switchTab(e.name)
   }
 
 const searchNetMusic = async () => {
@@ -764,7 +773,7 @@ onMounted(() => {
 }
 
 .content {
-  padding: 16px;
+  /* padding: 16px; */
   padding-bottom: 100px; /* Add padding for bottom tab bar */
 }
 .card {
@@ -813,35 +822,6 @@ onMounted(() => {
   color: #94a3b8;
 }
 
-/* Tabs */
-.view-tabs {
-  display: flex;
-  margin-bottom: 24rpx;
-  border-bottom: 1rpx solid #f1f5f9;
-}
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 16rpx 0;
-  font-size: 28rpx;
-  color: #64748b;
-  position: relative;
-}
-.tab-item.active {
-  color: #3b5bdb;
-  font-weight: 600;
-}
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40rpx;
-  height: 4rpx;
-  background: #3b5bdb;
-  border-radius: 2rpx;
-}
 
 /* Artist List */
 .artist-list {
