@@ -10,6 +10,7 @@ interface Song {
 }
 
 const audioContext = uni.createInnerAudioContext()
+const retryMap: Record<number, number> = {}
 
 // Internal reactive state
 const state = reactive({
@@ -154,6 +155,73 @@ const removeSong = (id: number) => {
   state.playList.splice(index, 1)
 }
 
+const refreshCurrentSongUrl = async () => {
+  const song = state.currentSong
+  if (!song) return
+
+  // Retry check
+  const retryCount = retryMap[song.id] || 0
+  if (retryCount > 2) {
+    console.error('Max retries reached')
+    return
+  }
+  retryMap[song.id] = retryCount + 1
+  
+  try {
+     const query = `${song.name} ${song.artist || ''}`.trim()
+     const res = await new Promise((resolve, reject) => {
+        uni.request({
+           url: `https://lpz.chatc.vip/apiqq.php`,
+           data: {
+              msg: query,
+              type: 'json'
+           },
+           success: (r) => resolve(r.data),
+           fail: (e) => reject(e)
+        })
+     }) as any
+     
+     if (res.code === 200 && Array.isArray(res.data) && res.data.length > 0) {
+        const bestMatch = res.data[0]
+        let newUrl = bestMatch.music_url
+        
+        if (!newUrl && bestMatch.n) {
+           // Fetch detail
+           const detailRes = await new Promise((resolve, reject) => {
+              uni.request({
+                 url: `https://lpz.chatc.vip/apiqq.php`,
+                 data: {
+                    msg: query,
+                    n: bestMatch.n,
+                    type: 'json',
+                    br: 2
+                 },
+                 success: (r) => resolve(r.data),
+                 fail: (e) => reject(e)
+              })
+           }) as any
+           if (detailRes.code === 200 && detailRes.data) {
+              newUrl = detailRes.data.music_url
+           }
+        }
+        
+        if (newUrl) {
+           song.url = newUrl
+           // Update playlist
+           const item = state.playList.find(s => s.id === song.id)
+           if (item) item.url = newUrl
+           
+           console.log('Refreshed URL:', newUrl)
+           // Replay
+           audioContext.src = newUrl
+           audioContext.play()
+        }
+     }
+  } catch (e) {
+     console.error('Refresh failed', e)
+  }
+}
+
 // Event listeners
 audioContext.onPlay(() => {
   state.isPlaying = true
@@ -171,6 +239,7 @@ audioContext.onPlay(() => {
   audioContext.onError((res) => {
     console.error('Audio error:', res)
     state.isPlaying = false
+    refreshCurrentSongUrl()
   })
   audioContext.onTimeUpdate(() => {
     state.currentTime = audioContext.currentTime
