@@ -9,6 +9,12 @@
       />
       <view class="bg-mask"></view>
 
+      <!-- Loading Overlay -->
+      <view class="loading-overlay" v-if="audioStore.isRetrying">
+        <view class="spinner"></view>
+        <text class="loading-text">正在重新获取链接...</text>
+      </view>
+
       <!-- Header -->
       <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
         <view class="back-btn" @click="goBack">
@@ -28,6 +34,12 @@
             :class="{ active: showLyrics }" 
             @click="showLyrics = true"
           >歌词</text>
+        </view>
+
+        <!-- Timer Button -->
+        <view class="timer-btn" @click="showTimerPopup = true">
+          <wd-icon name="time" size="44rpx" :color="audioStore.timerRemaining > 0 ? '#4CD964' : '#fff'" />
+          <text v-if="audioStore.timerRemaining > 0" class="timer-text">{{ formatTime(audioStore.timerRemaining) }}</text>
         </view>
       </view>
 
@@ -147,6 +159,29 @@
             <view class="popup-close" @click="showPlaylistPopup = false">关闭</view>
           </view>
         </view>
+
+        <!-- Timer Popup -->
+        <view class="playlist-popup" :class="{ show: showTimerPopup }">
+          <view class="popup-mask" @click="showTimerPopup = false"></view>
+          <view class="popup-content timer-popup-content">
+            <view class="popup-header">
+              <text class="popup-title">定时关闭</text>
+            </view>
+            <view class="timer-list">
+              <view 
+                v-for="item in timerOptions" 
+                :key="item.value"
+                class="timer-item"
+                :class="{ active: audioStore.timerDuration === item.value }"
+                @click="selectTimer(item.value)"
+              >
+                <text class="timer-text">{{ item.label }}</text>
+                <wd-icon v-if="audioStore.timerDuration === item.value" name="check" size="40rpx" color="#4CD964" />
+              </view>
+            </view>
+            <view class="popup-close" @click="showTimerPopup = false">关闭</view>
+          </view>
+        </view>
       </view>
     </view>
   </view>
@@ -165,6 +200,28 @@ const parsedLyrics = ref<{ time: number; text: string }[]>([])
 const scrollTop = ref(0)
 const currentScrollTop = ref(0)
 const showPlaylistPopup = ref(false)
+const showTimerPopup = ref(false)
+
+const timerOptions = [
+  { label: '不开启', value: 0 },
+  { label: '15分钟', value: 15 },
+  { label: '30分钟', value: 30 },
+  { label: '60分钟', value: 60 },
+  { label: '90分钟', value: 90 }
+]
+
+const selectTimer = (minutes: number) => {
+  if (minutes === 0) {
+    audioStore.stopTimer()
+  } else {
+    audioStore.startTimer(minutes)
+  }
+  showTimerPopup.value = false
+  uni.showToast({
+    title: minutes === 0 ? '已关闭定时' : `将在${minutes}分钟后停止`,
+    icon: 'none'
+  })
+}
 
 const isVisible = computed(() => audioStore.showFullScreen)
 
@@ -595,6 +652,74 @@ watch(showLyrics, (val) => {
 
 .playlist-popup.show .popup-mask {
   opacity: 1;
+}
+
+.timer-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx;
+}
+
+.timer-text {
+  font-size: 20rpx;
+  color: #fff;
+  margin-top: 4rpx;
+}
+
+.timer-list {
+  padding: 0 30rpx;
+}
+
+.timer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.timer-item:last-child {
+  border-bottom: none;
+}
+
+.timer-item .timer-text {
+  font-size: 30rpx;
+  color: #333;
+}
+
+.timer-item.active .timer-text {
+  color: #4CD964;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-top: 4rpx solid #fff;
+  border-radius: 50%;
+  animation: rotate 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+.loading-text {
+  color: #fff;
+  font-size: 28rpx;
 }
 
 .popup-content {

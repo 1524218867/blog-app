@@ -20,10 +20,49 @@ const state = reactive({
   playMode: 'sequence' as 'sequence' | 'single' | 'random' | 'order',
   duration: 0,
   currentTime: 0,
-  showFullScreen: false
+  showFullScreen: false,
+  isRetrying: false,
+  // Timer related
+  timerDuration: 0, // minutes
+  timerRemaining: 0, // seconds
+  timerId: null as number | null
 })
 
+// Timer Interval
+let intervalId: number | null = null
+
 // Actions
+const startTimer = (minutes: number) => {
+  stopTimer()
+  state.timerDuration = minutes
+  state.timerRemaining = minutes * 60
+  
+  // Create countdown interval
+  intervalId = setInterval(() => {
+    state.timerRemaining--
+    if (state.timerRemaining <= 0) {
+      // Time's up
+      stopTimer()
+      audioContext.pause()
+      state.isPlaying = false
+      uni.showToast({
+        title: '定时播放已结束',
+        icon: 'none'
+      })
+    }
+  }, 1000) as unknown as number
+}
+
+const stopTimer = () => {
+  if (intervalId) {
+    clearInterval(intervalId)
+    intervalId = null
+  }
+  state.timerDuration = 0
+  state.timerRemaining = 0
+  state.timerId = null
+}
+
 const setPlayList = (list: Song[]) => {
   state.playList = list
 }
@@ -167,6 +206,8 @@ const refreshCurrentSongUrl = async () => {
   }
   retryMap[song.id] = retryCount + 1
   
+  state.isRetrying = true
+  
   try {
      const query = `${song.name} ${song.artist || ''}`.trim()
      const res = await new Promise((resolve, reject) => {
@@ -219,6 +260,8 @@ const refreshCurrentSongUrl = async () => {
      }
   } catch (e) {
      console.error('Refresh failed', e)
+  } finally {
+    state.isRetrying = false
   }
 }
 
@@ -279,6 +322,11 @@ export const audioStore = reactive({
   get showFullScreen() { return state.showFullScreen },
   set showFullScreen(v) { state.showFullScreen = v },
 
+  get isRetrying() { return state.isRetrying },
+
+  get timerDuration() { return state.timerDuration },
+  get timerRemaining() { return state.timerRemaining },
+
   setPlayList,
   play,
   togglePlay,
@@ -286,6 +334,8 @@ export const audioStore = reactive({
   playPrev,
   togglePlayMode,
   seek,
-  removeSong
+  removeSong,
+  startTimer,
+  stopTimer
 })
 
