@@ -68,6 +68,12 @@ const isDragging = ref(false)
 const isClosing = ref(false)
 const suppressClick = ref(false)
 
+const formatTime = (time: number) => {
+  if (!time) return ''
+  const mins = Math.ceil(time / 60)
+  return `${mins}m`
+}
+
 const handleTouchStart = (e: any) => {
   // Reset closing state if we touch it again (though usually it's gone)
   isClosing.value = false
@@ -240,6 +246,26 @@ const goPlayer = () => {
 .artist {
   font-size: 22rpx;
   color: #888;
+}
+
+.artist-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.timer-badge {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  background: rgba(76, 217, 100, 0.1);
+  padding: 2rpx 8rpx;
+  border-radius: 8rpx;
+}
+
+.timer-text {
+  font-size: 20rpx;
+  color: #4CD964;
 }
 
 .controls {
