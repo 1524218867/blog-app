@@ -4,6 +4,20 @@
 // 3. 模拟器通常可以使用 'http://localhost:3000'
 export const apiBase = import.meta.env.VITE_API_BASE || (uni.getStorageSync('apiBase') as string) || 'http://localhost:3000'
 
+export const handleAuthError = () => {
+  uni.removeStorageSync('token')
+  uni.showToast({
+    title: '登录已过期，请重新登录',
+    icon: 'none',
+    duration: 2000
+  })
+  setTimeout(() => {
+    uni.reLaunch({
+      url: '/pages/auth/login'
+    })
+  }, 1500)
+}
+
 export const request = async (path: string, method: UniApp.RequestOptions['method'] = 'GET', data?: any) => {
   const token = uni.getStorageSync('token')
   
@@ -16,6 +30,12 @@ export const request = async (path: string, method: UniApp.RequestOptions['metho
       success: (res) => {
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data)
+          return
+        }
+        // 处理 401 Token 过期
+        if (res.statusCode === 401) {
+          handleAuthError()
+          reject(res.data)
           return
         }
         reject(res.data)

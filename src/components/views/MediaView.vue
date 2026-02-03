@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { request, apiBase } from '@/utils/request'
+import { request, apiBase, handleAuthError } from '@/utils/request'
 
 const activeTab = ref('all')
 const media = ref<any[]>([])
@@ -189,6 +189,11 @@ const handleUploadImage = () => {
                 Authorization: `Bearer ${uni.getStorageSync('token')}`
               },
               success: (uploadRes) => {
+                if (uploadRes.statusCode === 401) {
+                  handleAuthError()
+                  resolve(null)
+                  return
+                }
                 const data = JSON.parse(uploadRes.data)
                 if (data.ok) successCount++
                 resolve(data)
@@ -225,6 +230,10 @@ const handleUploadVideo = () => {
         },
         success: (uploadRes) => {
           uni.hideLoading()
+          if (uploadRes.statusCode === 401) {
+            handleAuthError()
+            return
+          }
           const data = JSON.parse(uploadRes.data)
           if (data.ok) {
             uni.showToast({ title: '上传成功' })
