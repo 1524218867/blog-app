@@ -11,6 +11,70 @@ interface Song {
 
 const audioContext = uni.createInnerAudioContext()
 const retryMap: Record<number, number> = {}
+let playbackCheckInterval: number | null = null
+let stalledCount = 0
+let lastCheckTime = -1
+let isManualPause = false
+let isSwitching = false
+
+const stopPlaybackCheck = () => {
+  if (playbackCheckInterval) {
+    clearInterval(playbackCheckInterval)
+    playbackCheckInterval = null
+  }
+  // Don't reset stalledCount here to preserve it across transient pauses/stops
+  // stalledCount = 0 
+  lastCheckTime = -1
+}
+
+const startPlaybackCheck = () => {
+  if (playbackCheckInterval) {
+    // Already running, don't restart to preserve state
+    return
+  }
+  
+  stopPlaybackCheck()
+  console.log('Starting playback check...')
+  lastCheckTime = audioContext.currentTime
+  
+  playbackCheckInterval = setInterval(() => {
+    const currentTime = audioContext.currentTime
+    const timeDiff = Math.abs(currentTime - lastCheckTime)
+    
+    console.log(`Playback check tick | Time: ${currentTime.toFixed(3)} | Diff: ${timeDiff.toFixed(3)} | Stalled: ${stalledCount} | Paused: ${audioContext.paused} | Playing: ${state.isPlaying}`)
+
+    // 如果不在播放状态（或者正在重试中），不检测
+    if (!state.isPlaying && !audioContext.paused) {
+       // 修正状态：Audio 说在播，但 Store 没更正（理论上 onPlay 会更正）
+    }
+    
+    if (state.isRetrying) return
+
+    // 检查进度是否卡住
+    // 如果1秒内进度变化小于 0.1秒，视为卡顿
+    if (timeDiff < 0.1) {
+       stalledCount++
+       console.log(`Playback check: stalled ${stalledCount}/3 (time: ${currentTime})`)
+       
+       // 连续 3 次（3秒）检测到卡顿，触发重试
+       if (stalledCount >= 3) {
+          console.warn('Playback stalled, triggering refresh')
+          stopPlaybackCheck()
+          refreshCurrentSongUrl()
+       }
+    } else {
+       // 正常播放中，重置计数
+       stalledCount = 0
+       // 如果进度已经走远了，可以停止监控以节省资源
+       // 只有当进度大于 5 秒且持续正常播放才停止，防止开头卡死
+       if (currentTime > 5) {
+          stopPlaybackCheck()
+       }
+    }
+    
+    lastCheckTime = currentTime
+  }, 1000) as unknown as number
+}
 
 // Internal reactive state
 const state = reactive({
@@ -43,6 +107,7 @@ const startTimer = (minutes: number) => {
     if (state.timerRemaining <= 0) {
       // Time's up
       stopTimer()
+      isManualPause = true
       audioContext.pause()
       state.isPlaying = false
       uni.showToast({
@@ -71,19 +136,45 @@ const play = (song: Song) => {
   // If playing the same song, just toggle or ensure playing
   if (state.currentSong?.id === song.id) {
     if (!state.isPlaying) {
+      isManualPause = true // Technically resuming, but using manual flag to handle potential stop-then-play
       audioContext.play()
+      // Note: isManualPause will be reset in onPlay or onPause
+      // Actually, for play(), we expect it to play.
     }
     return
   }
 
+  // 切换歌曲前，先重置状态和停止旧音频
+  // 防止 currentTime 残留导致进度条跳变或检测逻辑误判
+  isSwitching = true
+  isManualPause = true
+  audioContext.stop()
+  isManualPause = false // Reset after stop
+  
+  state.currentTime = 0
+  state.duration = 0
+  stalledCount = 0 // Reset stalled count for new song
+  // Note: stop() triggers onStop -> stopPlaybackCheck, so we don't need to call it manually,
+  // but calling it ensures clean state before we set new src.
+  stopPlaybackCheck()
+
   state.currentSong = song
   audioContext.src = song.url
+  
+  // Optimistically set playing state and start check IMMEDIATELY
+  // Don't wait for onPlay because invalid URLs might never trigger it
+  state.isPlaying = true
+  // Reset switching flag before playing new song
+  isSwitching = false
+  
   audioContext.play()
+  startPlaybackCheck()
 }
 
 const togglePlay = () => {
   if (!state.currentSong) return
   if (state.isPlaying) {
+    isManualPause = true
     audioContext.pause()
   } else {
     audioContext.play()
@@ -268,25 +359,53 @@ const refreshCurrentSongUrl = async () => {
 // Event listeners
 audioContext.onPlay(() => {
   state.isPlaying = true
+  startPlaybackCheck()
 })
   audioContext.onPause(() => {
+    // Check for abnormal pause (not manual and expected to be playing)
+    if (!isManualPause && state.isPlaying) {
+       console.warn('Abnormal pause detected, triggering refresh')
+       refreshCurrentSongUrl()
+       return
+    }
+
     state.isPlaying = false
+    stopPlaybackCheck()
+    isManualPause = false
   })
   audioContext.onStop(() => {
+    // Ignore if switching songs
+    if (isSwitching) return
+
+    // Check for abnormal stop
+    if (!isManualPause && state.isPlaying) {
+       console.warn('Abnormal stop detected, triggering refresh')
+       refreshCurrentSongUrl()
+       return
+    }
+
     state.isPlaying = false
+    stopPlaybackCheck()
+    isManualPause = false
   })
   audioContext.onEnded(() => {
     state.isPlaying = false
+    stopPlaybackCheck()
     playNext(true)
   })
   audioContext.onError((res) => {
     console.error('Audio error:', res)
     state.isPlaying = false
+    stopPlaybackCheck()
     refreshCurrentSongUrl()
   })
   audioContext.onTimeUpdate(() => {
     state.currentTime = audioContext.currentTime
     state.duration = audioContext.duration
+    // 如果播放进度正常前进了，可以提前清除监控（双重保险）
+    if (state.currentTime > 1 && playbackCheckInterval) {
+      stopPlaybackCheck()
+    }
   })
   audioContext.onCanplay(() => {
     state.duration = audioContext.duration
