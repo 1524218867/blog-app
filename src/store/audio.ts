@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { reportHistory } from '@/utils/request'
 
 interface Song {
   id: number
@@ -16,6 +17,37 @@ let stalledCount = 0
 let lastCheckTime = -1
 let isManualPause = false
 let isSwitching = false
+let reportTimer: number | null = null // 进度上报节流
+let lastReportedTime = 0 // 上次上报的时间点
+
+// 上报进度函数
+const reportProgress = (isFinished: boolean = false) => {
+  if (!state.currentSong) return
+  
+  // 如果是完成状态，立即上报
+  if (isFinished) {
+    reportHistory('audio', state.currentSong.id, 100, true)
+    return
+  }
+
+  // 避免频繁上报 (每10秒或进度变化超过10秒)
+  const currentTime = state.currentTime
+  
+  // 初始上报 (仅当从未上报过且刚开始播放时)
+  if (currentTime < 1 && lastReportedTime === 0) {
+     const progress = state.duration > 0 ? (currentTime / state.duration) * 100 : 0
+     reportHistory('audio', state.currentSong.id, progress, false)
+     lastReportedTime = 0.1 // 标记已上报过初始值
+     return
+  }
+
+  // 定期上报
+  if (Math.abs(currentTime - lastReportedTime) >= 10) {
+     const progress = state.duration > 0 ? (currentTime / state.duration) * 100 : 0
+     reportHistory('audio', state.currentSong.id, progress, false)
+     lastReportedTime = currentTime
+  }
+}
 
 const stopPlaybackCheck = () => {
   if (playbackCheckInterval) {
@@ -154,6 +186,7 @@ const play = (song: Song) => {
   state.currentTime = 0
   state.duration = 0
   stalledCount = 0 // Reset stalled count for new song
+  lastReportedTime = 0 // Reset report timer
   // Note: stop() triggers onStop -> stopPlaybackCheck, so we don't need to call it manually,
   // but calling it ensures clean state before we set new src.
   stopPlaybackCheck()
@@ -389,6 +422,7 @@ audioContext.onPlay(() => {
     isManualPause = false
   })
   audioContext.onEnded(() => {
+    reportProgress(true) // 上报完成
     state.isPlaying = false
     stopPlaybackCheck()
     playNext(true)
@@ -402,6 +436,9 @@ audioContext.onPlay(() => {
   audioContext.onTimeUpdate(() => {
     state.currentTime = audioContext.currentTime
     state.duration = audioContext.duration
+    
+    reportProgress(false) // 上报进度
+
     // 如果播放进度正常前进了，可以提前清除监控（双重保险）
     if (state.currentTime > 1 && playbackCheckInterval) {
       stopPlaybackCheck()

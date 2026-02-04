@@ -8,6 +8,8 @@
       controls 
       autoplay
       object-fit="contain"
+      @timeupdate="handleTimeUpdate"
+      @ended="handleEnded"
     ></video>
     <view class="info">
       <view class="author-row" v-if="user">
@@ -32,14 +34,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { request } from '@/utils/request'
+import { ref, onUnmounted } from 'vue'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { request, reportHistory } from '@/utils/request'
 
 const videoUrl = ref('')
 const coverUrl = ref('')
 const title = ref('')
+const videoId = ref<string | number>('')
 const user = ref<any>(null)
+
+// 进度记录
+let currentProgress = 0
+let isEnded = false
+let reportTimer: number | null = null
 
 const fetchUser = async () => {
   try {
@@ -57,8 +65,48 @@ onLoad((options) => {
     if (options.url) videoUrl.value = decodeURIComponent(options.url)
     if (options.cover) coverUrl.value = decodeURIComponent(options.cover)
     if (options.title) title.value = decodeURIComponent(options.title)
+    if (options.id) videoId.value = options.id
+    
+    // 初始上报
+    if (videoId.value) {
+      reportHistory('video', videoId.value, 0, false)
+    }
   }
   fetchUser()
+})
+
+const handleTimeUpdate = (e: any) => {
+  const { currentTime, duration } = e.detail
+  if (duration > 0) {
+    currentProgress = (currentTime / duration) * 100
+    
+    // 每 10 秒上报一次进度，避免过于频繁
+    if (!reportTimer) {
+      reportTimer = setTimeout(() => {
+        if (videoId.value) {
+          reportHistory('video', videoId.value, currentProgress, false)
+        }
+        reportTimer = null
+      }, 10000) as unknown as number
+    }
+  }
+}
+
+const handleEnded = () => {
+  isEnded = true
+  if (videoId.value) {
+    reportHistory('video', videoId.value, 100, true)
+  }
+}
+
+// 页面卸载时最后上报一次
+onUnload(() => {
+  if (reportTimer) {
+    clearTimeout(reportTimer)
+  }
+  if (videoId.value && !isEnded) {
+    reportHistory('video', videoId.value, currentProgress, false)
+  }
 })
 </script>
 

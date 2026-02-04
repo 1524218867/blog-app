@@ -121,19 +121,20 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { request } from '@/utils/request'
+import { request, hostBase } from '@/utils/request'
 
 // --- Types ---
 interface ContentItem {
-  id: string | number;
-  title: string;
-  type: 'article' | 'image' | 'video' | 'audio';
-  cover?: string;
-  desc?: string;
-  progress?: number;
-  lastAccessTime?: string;
-  createTime?: string;
-  isPinned?: boolean;
+  id: string | number
+  title: string
+  type: 'article' | 'video' | 'audio' | 'image'
+  cover?: string
+  url?: string
+  desc?: string
+  progress?: number
+  lastAccessTime?: string
+  createTime?: string
+  isPinned?: boolean
 }
 
 const props = defineProps<{
@@ -208,7 +209,13 @@ const handleItemClick = (item: ContentItem) => {
   if (item.type === 'article') {
     url = `/pages/article/detail?id=${item.id}`
   } else if (item.type === 'video') {
-    url = `/pages/media/video?id=${item.id}`
+    const params = [
+      `id=${item.id}`,
+      item.url ? `url=${encodeURIComponent(item.url)}` : '',
+      item.cover ? `cover=${encodeURIComponent(item.cover)}` : '',
+      item.title ? `title=${encodeURIComponent(item.title)}` : ''
+    ].filter(Boolean).join('&')
+    url = `/pages/media/video?${params}`
   } else {
     uni.showToast({ title: '功能开发中', icon: 'none' })
     return
@@ -223,15 +230,28 @@ const viewMore = (section: string) => {
   uni.showToast({ title: '查看更多开发中', icon: 'none' })
 }
 
+const processList = (list: any[]): ContentItem[] => {
+  return list.map(item => {
+    const newItem = { ...item }
+    if (newItem.cover && !newItem.cover.startsWith('http')) {
+      newItem.cover = `${hostBase}${newItem.cover}`
+    }
+    if (newItem.url && !newItem.url.startsWith('http')) {
+      newItem.url = `${hostBase}${newItem.url}`
+    }
+    return newItem
+  })
+}
+
 // --- Data Fetching ---
 const fetchData = async () => {
   try {
-    const res = await request('/api/dashboard/home-data', 'GET')
+    const res = await request('/dashboard/home-data', 'GET')
     if (res.ok && res.data) {
-      pinnedList.value = res.data.pinnedList || []
-      recentlyUsed.value = res.data.recentlyUsedList || []
-      unfinishedList.value = res.data.unfinishedList || []
-      recentlyAdded.value = res.data.recentlyAddedList || []
+      pinnedList.value = processList(res.data.pinnedList || [])
+      recentlyUsed.value = processList(res.data.recentlyUsedList || [])
+      unfinishedList.value = processList(res.data.unfinishedList || [])
+      recentlyAdded.value = processList(res.data.recentlyAddedList || [])
     }
   } catch (error) {
     console.error('Failed to fetch home data:', error)

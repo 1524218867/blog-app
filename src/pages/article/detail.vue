@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { request, apiBase } from '@/utils/request'
+import { request, apiBase, hostBase, reportHistory } from '@/utils/request'
 
 const article = ref<any>(null)
 const loading = ref(true)
@@ -55,6 +55,10 @@ const fetchArticle = async (id: string) => {
     loading.value = true
     const data = await request(`/articles/${id}`)
     article.value = data
+    
+    // 记录访问历史 (阅读文章通常标记为已读/未读，这里简单处理为打开即记录)
+    // 可以进一步优化：监听滚动到底部才算 isFinished=true
+    reportHistory('article', id, 0, false)
   } catch (error) {
     console.error('Failed to fetch article:', error)
   } finally {
@@ -79,13 +83,13 @@ const fullCoverUrl = computed(() => {
   if (!article.value?.cover) return ''
   return article.value.cover.startsWith('http') 
     ? article.value.cover 
-    : `${apiBase}${article.value.cover}`
+    : `${hostBase}${article.value.cover}`
 })
 
 const processedContent = computed(() => {
   if (!article.value?.content) return ''
   // Handle image paths in rich text content
-  return article.value.content.replace(/src="\/uploads\//g, `src="${apiBase}/uploads/`)
+  return article.value.content.replace(/src="\/uploads\//g, `src="${hostBase}/uploads/`)
 })
 </script>
 

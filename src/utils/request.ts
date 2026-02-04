@@ -3,6 +3,7 @@
 // 2. 如果是云服务器，请填写公网地址，例如 'https://api.example.com'
 // 3. 模拟器通常可以使用 'http://localhost:3000'
 export const apiBase = import.meta.env.VITE_API_BASE || (uni.getStorageSync('apiBase') as string) || 'http://localhost:3000'
+export const hostBase = apiBase.replace(/\/api\/?$/, '')
 
 export const handleAuthError = () => {
   uni.removeStorageSync('token')
@@ -43,4 +44,18 @@ export const request = async (path: string, method: UniApp.RequestOptions['metho
       fail: (err) => reject(err)
     })
   })
+}
+
+// 记录内容访问/进度
+export const reportHistory = async (type: 'article' | 'image' | 'video' | 'audio', id: string | number, progress: number = 0, isFinished: boolean = false) => {
+  try {
+    await request('/content/history', 'POST', {
+      type,
+      id,
+      progress: Math.floor(progress),
+      isFinished
+    })
+  } catch (e) {
+    console.error('Failed to report history:', e)
+  }
 }
