@@ -101,15 +101,17 @@
         <view class="section-header">
           <text class="section-title-text">📥 最近添加</text>
         </view>
-        <view class="list-container">
-          <view v-for="item in recentlyAdded" :key="item.id" class="simple-list-item" @click="handleItemClick(item)">
-            <view class="simple-info">
-              <text class="simple-title">{{ item.title }}</text>
-              <text class="simple-meta">{{ formatTime(item.createTime) }} · {{ getTypeName(item.type) }}</text>
+        <scroll-view scroll-y class="recent-added-scroll" :show-scrollbar="true">
+          <view class="list-container">
+            <view v-for="item in recentlyAdded" :key="item.id" class="simple-list-item" @click="handleItemClick(item)">
+              <view class="simple-info">
+                <text class="simple-title">{{ item.title }}</text>
+                <text class="simple-meta">{{ formatTime(item.createTime) }} · {{ getTypeName(item.type) }}</text>
+              </view>
+              <view class="simple-tag" :class="item.type">{{ getTypeName(item.type) }}</view>
             </view>
-            <view class="simple-tag" :class="item.type">{{ getTypeName(item.type) }}</view>
           </view>
-        </view>
+        </scroll-view>
       </view>
 
       <!-- Global Empty State -->
@@ -283,7 +285,7 @@ defineExpose({
 <style scoped>
 .content {
   width: 100%;
-  padding: 0 4rpx;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -293,7 +295,7 @@ defineExpose({
 
 /* Search */
 .search-section {
-  padding: 20rpx 20rpx 24rpx; /* Increased top padding */
+  padding: 0 0 24rpx; /* Removed top padding */
 }
 
 /* Sections */
@@ -534,4 +536,8 @@ defineExpose({
 .simple-tag.image { background: #ecfdf5; color: #10b981; }
 .simple-tag.video { background: #f5f3ff; color: #8b5cf6; }
 .simple-tag.audio { background: #fff7ed; color: #f97316; }
+
+.recent-added-scroll {
+  height: 420rpx;
+}
 </style>

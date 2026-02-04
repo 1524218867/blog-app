@@ -116,6 +116,7 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
 .library-content {
   flex: 1;
   overflow-y: auto;
+  padding: 20rpx;
 }
 
 .placeholder-container {

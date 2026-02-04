@@ -106,7 +106,7 @@ onShow(() => {
 <style>
 .page {
   min-height: 100%;
-  padding: calc(var(--status-bar-height) + 32rpx) 24rpx calc(200rpx + env(safe-area-inset-bottom));
+  padding: 0;
   background: #f5f6f8;
   box-sizing: border-box;
 }
