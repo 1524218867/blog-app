@@ -1,94 +1,121 @@
 <template>
   <view class="content">
-    <!-- Header Section -->
-    <view class="home-header">
-      <view class="header-left">
-        <text class="greeting">你好，{{ user?.nickname || user?.username || '朋友' }} <image src="/static/greeting.png" style="width: 28px; height: 28px; vertical-align: middle; display: inline-block;" /></text>
-        <text class="subtitle">今天想创作点什么？</text>
-      </view>
-      <view class="header-right">
-        <view class="avatar-box" @click="handleLogout">
-           <image v-if="user?.avatar" :src="user.avatar" mode="aspectFill" class="avatar" />
-           <view v-else class="avatar-placeholder">
-             <text class="avatar-text">{{ user?.email ? user.email[0].toUpperCase() : 'U' }}</text>
-           </view>
-        </view>
-      </view>
+    <!-- 1. 全局搜索 -->
+    <view class="search-section">
+      <wd-search 
+        v-model="searchKeyword" 
+        placeholder="搜索文章、媒体、音频..." 
+        cancel-txt="搜索" 
+        @search="handleSearch"
+        @clear="handleClear"
+        hide-cancel
+      />
     </view>
 
-    <!-- Stats Grid -->
-    <view class="section-title">数据概览</view>
-    <view class="stat-grid">
-      <view class="stat-item blue">
-        <view class="stat-icon-box">
-          <wd-icon name="list" size="24px" color="#3b82f6"></wd-icon>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{ stats[0].value }}</text>
-          <text class="stat-label">文章</text>
-        </view>
-      </view>
-      <view class="stat-item green">
-        <view class="stat-icon-box">
-          <wd-icon name="image" size="24px" color="#10b981"></wd-icon>
-        </view>
-        <view class="stat-info">
-           <text class="stat-value">{{ stats[1].value }}</text>
-           <text class="stat-label">图片</text>
-        </view>
-      </view>
-      <view class="stat-item purple">
-        <view class="stat-icon-box">
-          <wd-icon name="video" size="24px" color="#8b5cf6"></wd-icon>
-        </view>
-        <view class="stat-info">
-           <text class="stat-value">{{ stats[2].value }}</text>
-           <text class="stat-label">视频</text>
-        </view>
-      </view>
-      <view class="stat-item orange">
-        <view class="stat-icon-box">
-          <image src="/static/stat-music.png" style="width: 24px; height: 24px;" />
-        </view>
-        <view class="stat-info">
-           <text class="stat-value">{{ stats[3].value }}</text>
-           <text class="stat-label">音乐</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- Recent Activities -->
-    <view class="recent-section">
-      <view class="section-header">
-        <text class="section-title-text">最近动态</text>
-        <!-- <view class="more-link">
-          <text>查看更多</text>
-          <wd-icon name="arrow-right" size="14px" color="#94a3b8"></wd-icon>
-        </view> -->
-      </view>
+    <scroll-view scroll-y class="main-scroll" :show-scrollbar="false">
       
-      <view class="activity-list">
-        <view v-for="item in recentActivities" :key="item.id + item.type" class="activity-item">
-          <view class="activity-icon" :class="item.type">
-            <!-- Fallback icons -->
-            <text v-if="item.type === 'article'"><wd-icon name="list" size="24px" color="#3b82f6"></wd-icon></text>
-            <text v-else-if="item.type === 'image'"><wd-icon name="image" size="24px" color="#10b981"></wd-icon></text>
-            <text v-else-if="item.type === 'video'"><wd-icon name="video" size="24px" color="#8b5cf6"></wd-icon></text>
-            <text v-else><image src="/static/stat-music.png" style="width: 24px; height: 24px;" /></text>
-          </view>
-          <view class="activity-content">
-            <text class="activity-text">{{ item.text }}</text>
-            <text class="activity-time">{{ item.time }}</text>
-          </view>
-          <view class="activity-tag" :class="item.type">
-            {{ item.type === 'article' ? '文章' : item.type === 'video' ? '视频' : item.type === 'image' ? '图片' : '音乐' }}
-          </view>
+      <!-- 5. 置顶内容 (Pinned) - Optional -->
+      <view v-if="pinnedList.length > 0" class="section">
+        <view class="section-header">
+          <text class="section-title-text">📌 置顶内容</text>
         </view>
-        <view v-if="recentActivities.length === 0" class="empty-state">
-           <text class="empty-text">暂无动态</text>
+        <view class="pinned-list">
+          <view v-for="item in pinnedList" :key="item.id" class="pinned-card" @click="handleItemClick(item)">
+            <view class="pinned-icon">
+              <wd-icon v-if="item.type === 'article'" name="list" size="20px" color="#fff" />
+              <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" color="#fff" />
+              <wd-icon v-else-if="item.type === 'audio'" name="sound" size="20px" color="#fff" />
+              <wd-icon v-else name="image" size="20px" color="#fff" />
+            </view>
+            <view class="pinned-content">
+              <text class="pinned-title">{{ item.title }}</text>
+              <text class="pinned-desc">{{ item.desc || '精选内容' }}</text>
+            </view>
+          </view>
         </view>
       </view>
-    </view>
+
+      <!-- 2. 最近使用 (Recently Used) -->
+      <view class="section">
+        <view class="section-header">
+          <text class="section-title-text">⏱ 最近使用</text>
+          <view class="more-link" @click="viewMore('history')">
+            <text>更多</text>
+            <wd-icon name="arrow-right" size="14px" color="#94a3b8"></wd-icon>
+          </view>
+        </view>
+        <scroll-view scroll-x class="horizontal-scroll" :show-scrollbar="false">
+          <view class="horizontal-list">
+            <view v-for="item in recentlyUsed" :key="item.id" class="card-item" @click="handleItemClick(item)">
+              <view class="card-cover-box">
+                <image v-if="item.cover" :src="item.cover" mode="aspectFill" class="card-cover" />
+                <view v-else class="card-cover-placeholder" :class="item.type">
+                  <wd-icon v-if="item.type === 'article'" name="list" size="32px" color="#3b82f6" />
+                  <wd-icon v-else-if="item.type === 'video'" name="video" size="32px" color="#8b5cf6" />
+                  <wd-icon v-else-if="item.type === 'audio'" name="sound" size="32px" color="#f97316" />
+                  <wd-icon v-else name="image" size="32px" color="#10b981" />
+                </view>
+                <view class="type-badge" :class="item.type">
+                  <wd-icon v-if="item.type === 'article'" name="list" size="12px" color="#fff" />
+                  <wd-icon v-else-if="item.type === 'video'" name="video" size="12px" color="#fff" />
+                  <wd-icon v-else-if="item.type === 'audio'" name="sound" size="12px" color="#fff" />
+                  <wd-icon v-else name="image" size="12px" color="#fff" />
+                </view>
+              </view>
+              <text class="card-title">{{ item.title }}</text>
+              <text class="card-time">{{ formatTime(item.lastAccessTime) }}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 4. 未完成 (Unfinished) -->
+      <view class="section">
+        <view class="section-header">
+          <text class="section-title-text">⏯ 未完成</text>
+        </view>
+        <view class="list-container">
+          <view v-for="item in unfinishedList" :key="item.id" class="list-item" @click="handleItemClick(item)">
+             <view class="list-icon-box" :class="item.type">
+               <wd-icon v-if="item.type === 'article'" name="list" size="20px" :color="getTypeColor(item.type)" />
+               <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" :color="getTypeColor(item.type)" />
+               <wd-icon v-else-if="item.type === 'audio'" name="sound" size="20px" :color="getTypeColor(item.type)" />
+               <wd-icon v-else name="image" size="20px" :color="getTypeColor(item.type)" />
+             </view>
+             <view class="list-content">
+               <text class="list-title">{{ item.title }}</text>
+               <view class="progress-bar-bg">
+                 <view class="progress-bar-fill" :style="{ width: (item.progress || 0) + '%', backgroundColor: getTypeColor(item.type) }"></view>
+               </view>
+               <text class="list-subtitle">已进行 {{ item.progress }}%</text>
+             </view>
+             <view class="play-btn">
+               <wd-icon name="play-circle-filled" size="28px" :color="getTypeColor(item.type)" />
+             </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 3. 最近添加 (Recently Added) -->
+      <view class="section">
+        <view class="section-header">
+          <text class="section-title-text">📥 最近添加</text>
+        </view>
+        <view class="list-container">
+          <view v-for="item in recentlyAdded" :key="item.id" class="simple-list-item" @click="handleItemClick(item)">
+            <view class="simple-info">
+              <text class="simple-title">{{ item.title }}</text>
+              <text class="simple-meta">{{ formatTime(item.createTime) }} · {{ getTypeName(item.type) }}</text>
+            </view>
+            <view class="simple-tag" :class="item.type">{{ getTypeName(item.type) }}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- Spacer for bottom tab bar -->
+      <view style="height: 100px;"></view>
+    </scroll-view>
+
   </view>
 </template>
 
@@ -96,22 +123,54 @@
 import { ref, onMounted } from 'vue'
 import { request } from '@/utils/request'
 
+// --- Types ---
+interface ContentItem {
+  id: string | number;
+  title: string;
+  type: 'article' | 'image' | 'video' | 'audio';
+  cover?: string;
+  desc?: string;
+  progress?: number;
+  lastAccessTime?: string;
+  createTime?: string;
+  isPinned?: boolean;
+}
+
 const props = defineProps<{
   user: any
 }>()
 
-const emit = defineEmits(['refresh', 'ping', 'logout'])
+const emit = defineEmits(['refresh', 'logout'])
 
-const stats = ref([
-  { label: '文章', value: 0 },
-  { label: '图片', value: 0 },
-  { label: '视频', value: 0 },
-  { label: '音乐', value: 0 }
-])
+// --- State ---
+const searchKeyword = ref('')
+const pinnedList = ref<ContentItem[]>([])
+const recentlyUsed = ref<ContentItem[]>([])
+const unfinishedList = ref<ContentItem[]>([])
+const recentlyAdded = ref<ContentItem[]>([])
 
-const recentActivities = ref<any[]>([])
+// --- Helpers ---
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'article': return '#3b82f6';
+    case 'image': return '#10b981';
+    case 'video': return '#8b5cf6';
+    case 'audio': return '#f97316';
+    default: return '#9ca3af';
+  }
+}
 
-const formatTime = (timeStr: string) => {
+const getTypeName = (type: string) => {
+  switch (type) {
+    case 'article': return '文章';
+    case 'image': return '图片';
+    case 'video': return '视频';
+    case 'audio': return '音频';
+    default: return '未知';
+  }
+}
+
+const formatTime = (timeStr?: string) => {
   if (!timeStr) return ''
   const date = new Date(timeStr)
   const now = new Date()
@@ -130,41 +189,68 @@ const formatTime = (timeStr: string) => {
   return date.toLocaleDateString()
 }
 
-const fetchData = async () => {
-  try {
-    const data = await request('/dashboard/stats')
-    if (data && data.ok) {
-      stats.value = [
-        { label: '文章', value: data.stats.articles },
-        { label: '图片', value: data.stats.images },
-        { label: '视频', value: data.stats.videos },
-        { label: '音乐', value: data.stats.audios }
-      ]
-      
-      recentActivities.value = data.recentActivities.map((item: any) => ({
-        ...item,
-        time: formatTime(item.time)
-      }))
-    }
-  } catch (error) {
-    console.error('Failed to fetch dashboard stats:', error)
+// --- Actions ---
+const handleSearch = () => {
+  if (searchKeyword.value.trim()) {
+    uni.showToast({ title: `搜索: ${searchKeyword.value}`, icon: 'none' })
+    // TODO: Navigate to search results page
   }
 }
 
-const handleLogout = () => {
-  uni.showModal({
-    title: '提示',
-    content: '确定要退出登录吗？',
-    success: (res) => {
-      if (res.confirm) {
-        emit('logout')
-      }
+const handleClear = () => {
+  searchKeyword.value = ''
+}
+
+const handleItemClick = (item: ContentItem) => {
+  console.log('Clicked item:', item)
+  // TODO: Navigate to detail page based on item.type
+  let url = ''
+  if (item.type === 'article') {
+    url = `/pages/article/detail?id=${item.id}`
+  } else if (item.type === 'video') {
+    url = `/pages/media/video?id=${item.id}`
+  } else {
+    uni.showToast({ title: '功能开发中', icon: 'none' })
+    return
+  }
+  
+  if (url) {
+    uni.navigateTo({ url })
+  }
+}
+
+const viewMore = (section: string) => {
+  uni.showToast({ title: '查看更多开发中', icon: 'none' })
+}
+
+// --- Data Fetching ---
+const fetchData = async () => {
+  try {
+    const res = await request('/api/dashboard/home-data', 'GET')
+    if (res.ok && res.data) {
+      pinnedList.value = res.data.pinnedList || []
+      recentlyUsed.value = res.data.recentlyUsedList || []
+      unfinishedList.value = res.data.unfinishedList || []
+      recentlyAdded.value = res.data.recentlyAddedList || []
     }
-  })
+  } catch (error) {
+    console.error('Failed to fetch home data:', error)
+  }
 }
 
 onMounted(() => {
   fetchData()
+})
+
+// 下拉刷新
+const handleRefresh = async () => {
+  await fetchData()
+  uni.stopPullDownRefresh()
+}
+
+// 暴露刷新方法给父组件
+defineExpose({
+  refresh: handleRefresh
 })
 </script>
 
@@ -172,116 +258,22 @@ onMounted(() => {
 .content {
   width: 100%;
   padding: 0 4rpx;
+  box-sizing: border-box;
 }
 
-/* Header */
-.home-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24rpx 12rpx;
-  margin-bottom: 24rpx;
-}
-.header-left {
-  display: flex;
-  flex-direction: column;
-}
-.greeting {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 8rpx;
-}
-.subtitle {
-  font-size: 26rpx;
-  color: #64748b;
-}
-.avatar-box {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2rpx solid #e2e8f0;
-  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
-}
-.avatar {
-  width: 100%;
-  height: 100%;
-}
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  background: #3b82f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.avatar-text {
-  color: #fff;
-  font-size: 36rpx;
-  font-weight: bold;
+.main-scroll {
+  height: calc(100vh - 120rpx); /* Adjust based on search height */
 }
 
-/* Section Title */
-.section-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 24rpx;
-  padding: 0 12rpx;
+/* Search */
+.search-section {
+  padding: 20rpx 20rpx 24rpx; /* Increased top padding */
 }
 
-/* Stats Grid */
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24rpx;
+/* Sections */
+.section {
   margin-bottom: 48rpx;
-  padding: 0 12rpx;
-}
-.stat-item {
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 24rpx;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02);
-}
-.stat-icon-box {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 20rpx;
-}
-.stat-item.blue .stat-icon-box { background: #eff6ff; }
-.stat-item.green .stat-icon-box { background: #ecfdf5; }
-.stat-item.purple .stat-icon-box { background: #f5f3ff; }
-.stat-item.orange .stat-icon-box { background: #fff7ed; }
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-.stat-value {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-}
-.stat-label {
-  font-size: 24rpx;
-  color: #64748b;
-}
-
-/* Recent Activities */
-.recent-section {
-  background: #fff;
-  border-radius: 32rpx 32rpx 0 0;
-  padding: 32rpx 24rpx;
-  min-height: 400rpx;
+  padding: 0 20rpx;
 }
 .section-header {
   display: flex;
@@ -290,85 +282,217 @@ onMounted(() => {
   margin-bottom: 24rpx;
 }
 .section-title-text {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
   color: #1e293b;
 }
 .more-link {
   display: flex;
   align-items: center;
   gap: 4rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
+  color: #64748b;
+}
+
+/* Pinned List */
+.pinned-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+.pinned-card {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 24rpx;
+  padding: 24rpx;
+  width: calc(50% - 10rpx);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8rpx 16rpx rgba(59, 130, 246, 0.2);
+}
+.pinned-icon {
+  width: 64rpx;
+  height: 64rpx;
+  background: rgba(255,255,255,0.2);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+.pinned-title {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+.pinned-desc {
+  color: rgba(255,255,255,0.8);
+  font-size: 22rpx;
+}
+
+/* Horizontal Scroll List (Recently Used) */
+.horizontal-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+.horizontal-list {
+  display: flex;
+  padding-right: 20rpx; /* Padding for last item */
+}
+.card-item {
+  display: inline-flex;
+  flex-direction: column;
+  width: 240rpx;
+  margin-right: 24rpx;
+}
+.card-cover-box {
+  width: 240rpx;
+  height: 160rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+  position: relative;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+}
+.card-cover {
+  width: 100%;
+  height: 100%;
+}
+.card-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-cover-placeholder.article { background: #eff6ff; }
+.card-cover-placeholder.video { background: #f5f3ff; }
+.card-cover-placeholder.audio { background: #fff7ed; }
+.card-cover-placeholder.image { background: #ecfdf5; }
+
+.type-badge {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.type-badge.article { background: rgba(59, 130, 246, 0.9); }
+.type-badge.video { background: rgba(139, 92, 246, 0.9); }
+.type-badge.audio { background: rgba(249, 115, 22, 0.9); }
+.type-badge.image { background: rgba(16, 185, 129, 0.9); }
+
+.card-title {
+  font-size: 28rpx;
+  color: #1e293b;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4rpx;
+}
+.card-time {
+  font-size: 22rpx;
   color: #94a3b8;
 }
 
-.activity-list {
+/* Unfinished List */
+.list-container {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
 }
-.activity-item {
+.list-item {
   display: flex;
   align-items: center;
-  padding-bottom: 24rpx;
-  border-bottom: 1rpx solid #f1f5f9;
+  background: #fff;
+  padding: 20rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
 }
-.activity-item:last-child {
-  border-bottom: none;
-}
-.activity-icon {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 16rpx;
-  background: #f8fafc;
+.list-icon-box {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
   margin-right: 24rpx;
-  flex-shrink: 0;
 }
-.activity-content {
+.list-icon-box.article { background: #eff6ff; }
+.list-icon-box.video { background: #f5f3ff; }
+.list-icon-box.audio { background: #fff7ed; }
+.list-icon-box.image { background: #ecfdf5; }
+
+.list-content {
   flex: 1;
+  margin-right: 20rpx;
+}
+.list-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 12rpx;
+  display: block;
+}
+.progress-bar-bg {
+  width: 100%;
+  height: 8rpx;
+  background: #f1f5f9;
+  border-radius: 4rpx;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4rpx;
+}
+.list-subtitle {
+  font-size: 22rpx;
+  color: #64748b;
+}
+.play-btn {
+  opacity: 0.8;
+}
+
+/* Simple List (Recently Added) */
+.simple-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  background: #f8fafc;
+  border-radius: 16rpx;
+}
+.simple-info {
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
-  overflow: hidden;
+  gap: 6rpx;
 }
-.activity-text {
+.simple-title {
   font-size: 28rpx;
   color: #334155;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
 }
-.activity-time {
+.simple-meta {
   font-size: 22rpx;
   color: #94a3b8;
 }
-.activity-tag {
+.simple-tag {
   font-size: 20rpx;
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
-  background: #f1f5f9;
+  background: #e2e8f0;
   color: #64748b;
-  margin-left: 16rpx;
 }
-.activity-tag.article { background: #eff6ff; color: #3b82f6; }
-.activity-tag.image { background: #ecfdf5; color: #10b981; }
-.activity-tag.video { background: #f5f3ff; color: #8b5cf6; }
-.activity-tag.audio { background: #fff7ed; color: #f97316; }
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60rpx 0;
-  gap: 16rpx;
-}
-.empty-text {
-  color: #94a3b8;
-  font-size: 28rpx;
-}
+.simple-tag.article { background: #eff6ff; color: #3b82f6; }
+.simple-tag.image { background: #ecfdf5; color: #10b981; }
+.simple-tag.video { background: #f5f3ff; color: #8b5cf6; }
+.simple-tag.audio { background: #fff7ed; color: #f97316; }
 </style>

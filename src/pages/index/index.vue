@@ -6,20 +6,14 @@
       @refresh="refreshMe" 
       @logout="logout" 
     />
-    <ArticleView 
+    <LibraryView 
       v-show="currentTab === 1"
       :user="user" 
       @refresh="refreshMe" 
       @logout="logout" 
     />
-    <MediaView 
+    <ProfileView 
       v-show="currentTab === 2"
-      :user="user" 
-      @refresh="refreshMe" 
-      @logout="logout" 
-    />
-    <MusicView 
-      v-show="currentTab === 3"
       :user="user" 
       @refresh="refreshMe" 
       @logout="logout" 
@@ -28,6 +22,7 @@
     <MiniPlayer />
     <FullPlayer />
     <CustomTabBar :current="currentTab" @change="handleTabChange" />
+    <UpdatePopup />
   </view>
 </template>
 
@@ -38,10 +33,10 @@ import { request } from '@/utils/request'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import FullPlayer from '@/components/FullPlayer.vue'
+import UpdatePopup from '@/components/UpdatePopup.vue'
 import HomeView from '@/components/views/HomeView.vue'
-import ArticleView from '@/components/views/ArticleView.vue'
-import MediaView from '@/components/views/MediaView.vue'
-import MusicView from '@/components/views/MusicView.vue'
+import LibraryView from '@/components/views/LibraryView.vue'
+import ProfileView from '@/components/views/ProfileView.vue'
 
 const currentTab = ref(0)
 const isReady = ref(false)

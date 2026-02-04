@@ -65,22 +65,15 @@ const tabs: TabItem[] = [
     image: '/static/tab-home.png'
   },
   {
-    label: '文章',
-    icon: 'read',
-    customIcon: true,
-    image: '/static/tab-article.png'
-  },
-  {
-    label: '媒体',
-    icon: 'list',
+    label: '内容库',
+    icon: 'layers',
     customIcon: true,
     image: '/static/tab-media.png'
   },
   {
-    label: '音乐',
-    icon: 'sound', // keeping icon just in case, though customIcon takes precedence
-    customIcon: true,
-    image: '/static/tab-music.png'
+    label: '我的',
+    icon: 'user',
+    customIcon: false,
   }
 ]
 </script>

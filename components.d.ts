@@ -11,8 +11,11 @@ declare module 'vue' {
     CustomTabBar: typeof import('./src/components/CustomTabBar.vue')['default']
     FullPlayer: typeof import('./src/components/FullPlayer.vue')['default']
     HomeView: typeof import('./src/components/views/HomeView.vue')['default']
+    LibraryView: typeof import('./src/components/views/LibraryView.vue')['default']
     MediaView: typeof import('./src/components/views/MediaView.vue')['default']
     MiniPlayer: typeof import('./src/components/MiniPlayer.vue')['default']
     MusicView: typeof import('./src/components/views/MusicView.vue')['default']
+    ProfileView: typeof import('./src/components/views/ProfileView.vue')['default']
+    UpdatePopup: typeof import('./src/components/UpdatePopup.vue')['default']
   }
 }
