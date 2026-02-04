@@ -20,7 +20,13 @@
           <text class="section-title-text">📌 置顶内容</text>
         </view>
         <view class="pinned-list">
-          <view v-for="item in pinnedList" :key="item.id" class="pinned-card" @click="handleItemClick(item)">
+          <view 
+            v-for="item in pinnedList" 
+            :key="item.id" 
+            class="pinned-card" 
+            @click="handleItemClick(item)"
+            @longpress="handlePinnedLongPress(item)"
+          >
             <view class="pinned-icon">
               <wd-icon v-if="item.type === 'article'" name="list" size="20px" color="#fff" />
               <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" color="#fff" />
@@ -124,6 +130,26 @@
       <view style="height: 100px;"></view>
     </scroll-view>
 
+    <!-- Popup Action Sheet -->
+    <wd-popup 
+      v-model="showActionSheet" 
+      position="center" 
+      custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx;"
+      :z-index="10000"
+    >
+      <view class="popup-menu">
+        <view class="popup-title">操作</view>
+        <view 
+          v-for="(action, index) in actionSheetActions" 
+          :key="index" 
+          class="popup-item" 
+          :style="{ color: action.color || '#333' }"
+          @click="handleActionSelect({ item: action })"
+        >
+          {{ action.name }}
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
@@ -152,6 +178,11 @@ const props = defineProps<{
 const emit = defineEmits(['refresh', 'logout'])
 
 // --- State ---
+// Action Sheet State
+const showActionSheet = ref(false)
+const actionSheetActions = ref<any[]>([])
+const currentActionItem = ref<ContentItem | null>(null)
+
 const searchKeyword = ref('')
 const pinnedList = ref<ContentItem[]>([])
 const recentlyUsed = ref<ContentItem[]>([])
@@ -274,6 +305,32 @@ onMounted(() => {
 const handleRefresh = async () => {
   await fetchData()
   uni.stopPullDownRefresh()
+}
+
+const handlePinnedLongPress = (item: ContentItem) => {
+  currentActionItem.value = item
+  actionSheetActions.value = [{ name: '取消置顶', color: '#fa4350' }]
+  showActionSheet.value = true
+}
+
+const handleActionSelect = async ({ item }: any) => {
+  showActionSheet.value = false
+  if (item.name === '取消置顶' && currentActionItem.value) {
+    try {
+      await request('/content/pin', 'POST', {
+        type: currentActionItem.value.type,
+        id: currentActionItem.value.id,
+        isPinned: false
+      })
+      uni.showToast({ title: '已取消置顶', icon: 'success' })
+      fetchData()
+      // 通知其他页面刷新
+      uni.$emit('refreshStats')
+    } catch (error) {
+      console.error('Failed to unpin:', error)
+      uni.showToast({ title: '操作失败', icon: 'none' })
+    }
+  }
 }
 
 // 暴露刷新方法给父组件
@@ -539,5 +596,32 @@ defineExpose({
 
 .recent-added-scroll {
   height: 420rpx;
+}
+
+/* Popup Menu Styles */
+.popup-menu {
+  width: 100%;
+  background: #fff;
+}
+.popup-title {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+.popup-item {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 30rpx;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+.popup-item:last-child {
+  border-bottom: none;
+}
+.popup-item:active {
+  background-color: #f8fafc;
 }
 </style>

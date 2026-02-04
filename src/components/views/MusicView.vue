@@ -1,6 +1,8 @@
 <template>
-  <view class="content">
-    <view class="card">
+  <view class="content-wrapper">
+    <scroll-view scroll-y class="scroll-container" :scroll-into-view="scrollIntoViewId" scroll-with-animation>
+      <view class="content">
+        <view class="card">
       <view class="section-header">
         <view class="title">我的音乐</view>
         <view class="actions">
@@ -178,6 +180,8 @@
         </wd-tab>
       </wd-tabs>
     </view>
+      </view>
+    </scroll-view>
 
     <!-- Batch Action Bar -->
     <view v-if="isSelectionMode" class="batch-action-bar">
@@ -201,6 +205,29 @@
     >
       <image src="/static/miaodian.png" class="locate-icon" mode="aspectFit" />
     </view>
+
+    <!-- Popup Action Sheet -->
+    <wd-popup 
+      v-model="showActionSheet" 
+      position="center" 
+      custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx;"
+      :z-index="10000"
+    >
+      <view class="popup-menu">
+        <view class="popup-title">{{ actionSheetType === 'delete' ? '操作' : '选择分组' }}</view>
+        <scroll-view scroll-y style="max-height: 600rpx;">
+          <view 
+            v-for="(action, index) in actionSheetActions" 
+            :key="index" 
+            class="popup-item" 
+            :style="{ color: action.color || '#333' }"
+            @click="handleActionSelect({ item: action })"
+          >
+            {{ action.name }}
+          </view>
+        </scroll-view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
@@ -227,7 +254,14 @@ const activeTab = ref<'songs' | 'artists' | 'net'>('songs')
 const selectedArtist = ref<string | null>(null)
 const isSelectionMode = ref(false)
 const selectedNetSongs = ref<Song[]>([])
+const scrollIntoViewId = ref('')
 let searchTimer: any = null
+
+// Action Sheet State
+const showActionSheet = ref(false)
+const actionSheetActions = ref<any[]>([])
+const currentActionSong = ref<Song | null>(null)
+const actionSheetType = ref<'delete' | 'addToGroup' | 'batchAddToGroup'>('delete')
 
 const artistGroups = ref<any[]>([])
   const artistSongs = ref<Song[]>([])
@@ -448,52 +482,59 @@ const addToFavorites = async (song: Song) => {
   
   uni.hideLoading()
   
-  // 3. Show ActionSheet
-  const itemList = ['默认（未分组）', ...groups.map((g: any) => g.name)]
-  
-  uni.showActionSheet({
-    itemList,
-    success: async (res) => {
-      const index = res.tapIndex
-      let groupId = null
-      if (index > 0) {
-        groupId = groups[index - 1].id
-      }
-      
-      uni.showLoading({ title: '添加中...' })
-      try {
-        await request('/audios/link', 'POST', {
-           url: song.url,
-           filename: song.name,
-           singer: song.artist,
-           cover: song.coverUrl,
-           lyrics: song.lyrics,
-           group_id: groupId
-        })
-        uni.showToast({ title: '已加入我的音乐', icon: 'success' })
-      } catch (error) {
-        console.error('Add to favorites error:', error)
-        uni.showToast({ title: '添加失败', icon: 'none' })
-      } finally {
-        uni.hideLoading()
-      }
-    },
-    fail: (res) => {
-      console.log('ActionSheet failed/cancelled:', res.errMsg)
-    }
-  })
+  // 3. Show Popup
+  currentActionSong.value = song
+  actionSheetType.value = 'addToGroup'
+  actionSheetActions.value = [
+    { name: '默认（未分组）', id: null },
+    ...groups.map((g: any) => ({ name: g.name, id: g.id }))
+  ]
+  showActionSheet.value = true
 }
 
 const handleLongPress = (song: Song) => {
-  uni.showActionSheet({
-    itemList: ['删除'],
-    itemColor: '#ef4444',
-    success: (res) => {
-      if (res.tapIndex === 0) {
-        deleteSong(song)
-      }
+  currentActionSong.value = song
+  actionSheetType.value = 'delete'
+  actionSheetActions.value = [
+    { name: '删除', color: '#fa4350' }
+  ]
+  showActionSheet.value = true
+}
+
+const handleActionSelect = async ({ item }: any) => {
+  showActionSheet.value = false
+
+  if (actionSheetType.value === 'delete') {
+    if (!currentActionSong.value) return
+    if (item.name === '删除') {
+      deleteSong(currentActionSong.value)
     }
-  })
+  } else if (actionSheetType.value === 'addToGroup') {
+    if (!currentActionSong.value) return
+    const song = currentActionSong.value
+    const groupId = item.id
+    
+    uni.showLoading({ title: '添加中...' })
+    try {
+      await request('/audios/link', 'POST', {
+         url: song.url,
+         filename: song.name,
+         singer: song.artist,
+         cover: song.coverUrl,
+         lyrics: song.lyrics,
+         group_id: groupId
+      })
+      uni.showToast({ title: '已加入我的音乐', icon: 'success' })
+    } catch (error) {
+      console.error('Add to favorites error:', error)
+      uni.showToast({ title: '添加失败', icon: 'none' })
+    } finally {
+      uni.hideLoading()
+    }
+  } else if (actionSheetType.value === 'batchAddToGroup') {
+    const groupId = item.id
+    await processBatchAdd(groupId)
+  }
 }
 
 const deleteSong = async (song: Song) => {
@@ -635,20 +676,13 @@ const batchAddToGroup = async () => {
   
   uni.hideLoading()
   
-  const itemList = ['默认（未分组）', ...groups.map((g: any) => g.name)]
-  
-  uni.showActionSheet({
-    itemList,
-    success: async (res) => {
-      const index = res.tapIndex
-      let groupId: number | null = null
-      if (index > 0) {
-        groupId = groups[index - 1].id
-      }
-      
-      await processBatchAdd(groupId)
-    }
-  })
+  // Show Popup
+  actionSheetType.value = 'batchAddToGroup'
+  actionSheetActions.value = [
+    { name: '默认（未分组）', id: null },
+    ...groups.map((g: any) => ({ name: g.name, id: g.id }))
+  ]
+  showActionSheet.value = true
 }
 
 const processBatchAdd = async (groupId: number | null) => {
@@ -730,14 +764,7 @@ const processBatchAdd = async (groupId: number | null) => {
 
 const scrollToCurrentSong = () => {
   if (!audioStore.currentSong) return
-  const id = `song-${audioStore.currentSong.id}`
-  uni.pageScrollTo({
-    selector: `#${id}`,
-    duration: 300,
-    fail: () => {
-      uni.showToast({ title: '当前播放歌曲不在列表中', icon: 'none' })
-    }
-  })
+  scrollIntoViewId.value = `song-${audioStore.currentSong.id}`
 }
 
 onMounted(() => {
@@ -746,6 +773,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.content-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.scroll-container {
+  flex: 1;
+  height: 0;
+  width: 100%;
+}
 .locate-fab {
   position: fixed;
   right: 20px;
@@ -775,13 +813,19 @@ onMounted(() => {
 .content {
   /* padding: 16px; */
   padding-bottom: 100px; /* Add padding for bottom tab bar */
+  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 .card {
+  flex: 1;
   background: #ffffff;
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 24rpx;
   min-height: 400rpx;
+  box-sizing: border-box;
 }
 .section-header {
   display: flex;
@@ -1073,5 +1117,31 @@ onMounted(() => {
   background: #cbd5e1;
   color: #f1f5f9;
   pointer-events: none;
+}
+/* Popup Menu Styles */
+.popup-menu {
+  width: 100%;
+  background: #fff;
+}
+.popup-title {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+.popup-item {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 30rpx;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+.popup-item:last-child {
+  border-bottom: none;
+}
+.popup-item:active {
+  background-color: #f8fafc;
 }
 </style>

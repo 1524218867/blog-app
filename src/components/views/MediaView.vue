@@ -1,7 +1,8 @@
 <template>
   <view class="content-wrapper">
-    <view class="content">
-      <view class="card">
+    <scroll-view scroll-y class="scroll-container">
+      <view class="content">
+        <view class="card">
         <view class="section-header">
           <view class="title">媒体库</view>
           <view class="header-actions">
@@ -53,6 +54,8 @@
           <view v-if="filteredMedia.length === 0" class="empty-tip">未找到相关媒体</view>
         </view>
       </view>
+    </view>
+    </scroll-view>
 
       <!-- Floating Action Button -->
       <wd-fab 
@@ -60,6 +63,7 @@
         position="right-bottom" 
         direction="top"
         custom-style="top: 610px;"
+        :z-index="200"
       >
         <wd-button custom-class="fab-action-btn" type="primary" round @click="handleUploadImage">
           <wd-icon name="image" size="22px"></wd-icon>
@@ -68,7 +72,27 @@
           <wd-icon name="video" size="22px"></wd-icon>
         </wd-button>
       </wd-fab>
-    </view>
+
+      <!-- Popup Action Sheet -->
+      <wd-popup 
+        v-model="showActionSheet" 
+        position="center" 
+        custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx;"
+        :z-index="10000"
+      >
+        <view class="popup-menu">
+          <view class="popup-title">操作</view>
+          <view 
+            v-for="(action, index) in actionSheetActions" 
+            :key="index" 
+            class="popup-item" 
+            :style="{ color: action.color || '#333' }"
+            @click="handleActionSelect({ item: action })"
+          >
+            {{ action.name }}
+          </view>
+        </view>
+      </wd-popup>
   </view>
 </template>
 
@@ -76,10 +100,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { request, apiBase, handleAuthError } from '@/utils/request'
 
-const activeTab = ref('all')
 const media = ref<any[]>([])
+const activeTab = ref('all')
 const searchQuery = ref('')
 let searchTimer: any = null
+
+// Action Sheet State
+const showActionSheet = ref(false)
+const actionSheetActions = ref<any[]>([])
+const currentMedia = ref<any>(null)
 
 const fetchMedia = async () => {
   try {
@@ -96,7 +125,8 @@ const fetchMedia = async () => {
       date: item.created_at ? item.created_at.split('T')[0] : '',
       fullUrl: item.url.startsWith('http') ? item.url : `${apiBase}${item.url}`,
       displayMeta: '图片',
-      size: 'Image' // Placeholder size
+      size: 'Image', // Placeholder size
+      isPinned: !!item.isPinned
     }))
 
     const videoList = (Array.isArray(videos) ? videos : []).map((item: any) => ({
@@ -107,7 +137,8 @@ const fetchMedia = async () => {
       fullUrl: item.url.startsWith('http') ? item.url : `${apiBase}${item.url}`,
       coverUrl: item.cover ? (item.cover.startsWith('http') ? item.cover : `${apiBase}${item.cover}`) : '',
       displayMeta: item.duration || '视频',
-      size: 'Video' // Placeholder size
+      size: 'Video', // Placeholder size
+      isPinned: !!item.isPinned
     }))
 
     media.value = [...imageList, ...videoList].sort((a, b) => 
@@ -147,27 +178,59 @@ const handleMediaClick = (item: any) => {
   }
 }
 
+const handlePin = async (item: any) => {
+  try {
+     await request('/content/pin', 'POST', {
+       type: item.type, // 'image' or 'video'
+       id: item.id,
+       isPinned: !item.isPinned
+     })
+     uni.showToast({ title: item.isPinned ? '已取消置顶' : '已置顶', icon: 'success' })
+     fetchMedia()
+     uni.$emit('refreshHome')
+  } catch(e) {
+     console.error(e)
+     uni.showToast({ title: '操作失败', icon: 'none' })
+  }
+}
+
 const handleLongPress = (item: any) => {
-  uni.showModal({
-    title: '提示',
-    content: `确定要删除这个${item.type === 'image' ? '图片' : '视频'}吗？`,
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          uni.showLoading({ title: '删除中...' })
-          const endpoint = item.type === 'image' ? `/images/${item.id}` : `/videos/${item.id}`
-          await request(endpoint, 'DELETE')
-          uni.showToast({ title: '删除成功', icon: 'success' })
-          fetchMedia()
-        } catch (error) {
-          console.error('Failed to delete media:', error)
-          uni.showToast({ title: '删除失败', icon: 'none' })
-        } finally {
-          uni.hideLoading()
+  currentMedia.value = item
+  actionSheetActions.value = [
+    { name: item.isPinned ? '取消置顶' : '置顶' },
+    { name: '删除', color: '#fa4350' }
+  ]
+  showActionSheet.value = true
+}
+
+const handleActionSelect = async ({ item }: any) => {
+  showActionSheet.value = false
+  if (!currentMedia.value) return
+
+  if (item.name === '置顶' || item.name === '取消置顶') {
+    handlePin(currentMedia.value)
+  } else if (item.name === '删除') {
+    uni.showModal({
+      title: '提示',
+      content: `确定要删除这个${currentMedia.value.type === 'image' ? '图片' : '视频'}吗？`,
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            uni.showLoading({ title: '删除中...' })
+            const endpoint = currentMedia.value.type === 'image' ? `/images/${currentMedia.value.id}` : `/videos/${currentMedia.value.id}`
+            await request(endpoint, 'DELETE')
+            uni.showToast({ title: '删除成功', icon: 'success' })
+            fetchMedia()
+          } catch (error) {
+            console.error('Failed to delete media:', error)
+            uni.showToast({ title: '删除失败', icon: 'none' })
+          } finally {
+            uni.hideLoading()
+          }
         }
       }
-    }
-  })
+    })
+  }
 }
 
 const handleUploadImage = () => {
@@ -262,14 +325,32 @@ const handleUploadVideo = () => {
   margin: 8rpx;
 }
 
-.content {
+.content-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.scroll-container {
+  flex: 1;
+  height: 0;
   width: 100%;
 }
+.content {
+  width: 100%;
+  min-height: 100%;
+  padding-bottom: 20rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
 .card {
+  flex: 1;
   background: #ffffff;
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 24rpx;
+  box-sizing: border-box;
 }
 .section-header {
   display: flex;
@@ -368,5 +449,32 @@ const handleUploadVideo = () => {
   color: #94a3b8;
   padding: 40rpx 0;
   font-size: 28rpx;
+}
+
+/* Popup Menu Styles */
+.popup-menu {
+  width: 100%;
+  background: #fff;
+}
+.popup-title {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+.popup-item {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 30rpx;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+.popup-item:last-child {
+  border-bottom: none;
+}
+.popup-item:active {
+  background-color: #f8fafc;
 }
 </style>

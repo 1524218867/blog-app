@@ -28,6 +28,7 @@
       
       <ArticleView 
         v-show="currentTab === 1" 
+        class="view-container"
         :user="user" 
         @refresh="$emit('refresh')" 
         @logout="$emit('logout')" 
@@ -35,6 +36,7 @@
       
       <MediaView 
         v-show="currentTab === 2" 
+        class="view-container"
         :user="user" 
         @refresh="$emit('refresh')" 
         @logout="$emit('logout')" 
@@ -42,6 +44,7 @@
       
       <MusicView 
         v-show="currentTab === 3" 
+        class="view-container"
         :user="user" 
         @refresh="$emit('refresh')" 
         @logout="$emit('logout')" 
@@ -100,7 +103,7 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
 
 .tab-item.active {
   color: #3b82f6;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tab-line {
@@ -115,8 +118,21 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
 
 .library-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.view-container {
+  flex: 1;
+  height: 0; /* Important for scroll-view to work inside flex item */
+  overflow: hidden;
+}
+
+.all-content {
+  padding: 40px 20px;
+  text-align: center;
 }
 
 .placeholder-container {

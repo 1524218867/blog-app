@@ -1,7 +1,8 @@
 <template>
   <view class="content-wrapper">
-    <view class="content">
-      <view class="card">
+    <scroll-view scroll-y class="scroll-container">
+      <view class="content">
+        <view class="card">
         <view class="section-header-row">
           <view class="title">全部文章</view>
         </view>
@@ -34,6 +35,7 @@
         </view>
       </view>
     </view>
+    </scroll-view>
 
     <!-- Floating Action Button -->
     <wd-fab 
@@ -41,11 +43,33 @@
       position="right-bottom" 
       direction="top"
       custom-style="top: 610px;"
+      :z-index="200"
     >
       <wd-button custom-class="fab-action-btn" type="primary" round @click="goEditor()">
         <wd-icon name="add" size="22px"></wd-icon>
       </wd-button>
     </wd-fab>
+
+    <!-- Popup Action Sheet -->
+    <wd-popup 
+      v-model="showActionSheet" 
+      position="center" 
+      custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx;"
+      :z-index="10000"
+    >
+      <view class="popup-menu">
+        <view class="popup-title">操作</view>
+        <view 
+          v-for="(action, index) in actionSheetActions" 
+          :key="index" 
+          class="popup-item" 
+          :style="{ color: action.color || '#333' }"
+          @click="handleActionSelect({ item: action })"
+        >
+          {{ action.name }}
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
@@ -62,11 +86,17 @@ interface Post {
   status: string
   author?: string
   summary?: string
+  isPinned?: boolean
 }
 
 const posts = ref<Post[]>([])
 const searchQuery = ref('')
 let searchTimer: any = null
+
+// Action Sheet State
+const showActionSheet = ref(false)
+const actionSheetActions = ref<any[]>([])
+const currentPost = ref<Post | null>(null)
 
 const formatDate = (dateStr: string | Date) => {
   if (!dateStr) return ''
@@ -86,7 +116,8 @@ const fetchPosts = async () => {
       date: formatDate(item.publish_date || item.created_at),
       // Simple summary from content (strip HTML if needed, but for now just truncate)
       summary: item.content ? item.content.replace(/<[^>]+>/g, '').slice(0, 50) + '...' : '',
-      author: 'Admin' // Backend doesn't return author name yet, default to Admin
+      author: 'Admin', // Backend doesn't return author name yet, default to Admin
+      isPinned: !!item.isPinned
     }))
   } catch (error) {
     console.error('Failed to fetch articles:', error)
@@ -106,28 +137,59 @@ const goDetail = (id: number) => {
   })
 }
 
+const handlePin = async (post: Post) => {
+  try {
+     await request('/content/pin', 'POST', {
+       type: 'article',
+       id: post.id,
+       isPinned: !post.isPinned
+     })
+     uni.showToast({ title: post.isPinned ? '已取消置顶' : '已置顶', icon: 'success' })
+     fetchPosts()
+     uni.$emit('refreshHome')
+  } catch(e) {
+     console.error(e)
+     uni.showToast({ title: '操作失败', icon: 'none' })
+  }
+}
+
 const handleLongPress = (post: Post) => {
-  uni.showModal({
-    title: '提示',
-    content: `确定要删除文章《${post.title}》吗？`,
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          uni.showLoading({ title: '删除中...' })
-          await request(`/articles/${post.id}`, 'DELETE')
-          uni.showToast({ title: '删除成功', icon: 'success' })
-          fetchPosts()
-          // Emit event to refresh other components if needed
-          uni.$emit('refreshStats')
-        } catch (error) {
-          console.error('Failed to delete article:', error)
-          uni.showToast({ title: '删除失败', icon: 'none' })
-        } finally {
-          uni.hideLoading()
+  currentPost.value = post
+  actionSheetActions.value = [
+    { name: post.isPinned ? '取消置顶' : '置顶' },
+    { name: '删除', color: '#fa4350' }
+  ]
+  showActionSheet.value = true
+}
+
+const handleActionSelect = async ({ item }: any) => {
+  showActionSheet.value = false
+  if (!currentPost.value) return
+
+  if (item.name === '置顶' || item.name === '取消置顶') {
+    handlePin(currentPost.value)
+  } else if (item.name === '删除') {
+    uni.showModal({
+      title: '提示',
+      content: `确定要删除文章《${currentPost.value.title}》吗？`,
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            uni.showLoading({ title: '删除中...' })
+            await request(`/articles/${currentPost.value!.id}`, 'DELETE')
+            uni.showToast({ title: '删除成功', icon: 'success' })
+            fetchPosts()
+            uni.$emit('refreshStats')
+          } catch (error) {
+            console.error('Failed to delete article:', error)
+            uni.showToast({ title: '删除失败', icon: 'none' })
+          } finally {
+            uni.hideLoading()
+          }
         }
       }
-    }
-  })
+    })
+  }
 }
 
 const goEditor = () => {
@@ -147,14 +209,32 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.content {
+.content-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.scroll-container {
+  flex: 1;
+  height: 0;
   width: 100%;
 }
+.content {
+  width: 100%;
+  min-height: 100%;
+  padding-bottom: 20rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
 .card {
+  flex: 1;
   background: #ffffff;
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 24rpx;
+  box-sizing: border-box;
 }
 .title {
   font-size: 32rpx;
@@ -245,5 +325,32 @@ onUnmounted(() => {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+/* Popup Menu Styles */
+.popup-menu {
+  width: 100%;
+  background: #fff;
+}
+.popup-title {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+.popup-item {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 30rpx;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+.popup-item:last-child {
+  border-bottom: none;
+}
+.popup-item:active {
+  background-color: #f8fafc;
 }
 </style>
