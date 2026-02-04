@@ -36,7 +36,7 @@
       </view>
 
       <!-- 2. 最近使用 (Recently Used) -->
-      <view class="section">
+      <view class="section" v-if="recentlyUsed.length > 0">
         <view class="section-header">
           <text class="section-title-text">⏱ 最近使用</text>
           <view class="more-link" @click="viewMore('history')">
@@ -70,7 +70,7 @@
       </view>
 
       <!-- 4. 未完成 (Unfinished) -->
-      <view class="section">
+      <view class="section" v-if="unfinishedList.length > 0">
         <view class="section-header">
           <text class="section-title-text">⏯ 未完成</text>
         </view>
@@ -97,7 +97,7 @@
       </view>
 
       <!-- 3. 最近添加 (Recently Added) -->
-      <view class="section">
+      <view class="section" v-if="recentlyAdded.length > 0">
         <view class="section-header">
           <text class="section-title-text">📥 最近添加</text>
         </view>
@@ -110,6 +110,12 @@
             <view class="simple-tag" :class="item.type">{{ getTypeName(item.type) }}</view>
           </view>
         </view>
+      </view>
+
+      <!-- Global Empty State -->
+      <view v-if="!pinnedList.length && !recentlyUsed.length && !unfinishedList.length && !recentlyAdded.length" class="empty-state">
+        <wd-icon name="box" size="64px" color="#cbd5e1"></wd-icon>
+        <text class="empty-text">暂无内容，快去库里添加吧</text>
       </view>
 
       <!-- Spacer for bottom tab bar -->
@@ -481,7 +487,20 @@ defineExpose({
   opacity: 0.8;
 }
 
-/* Simple List (Recently Added) */
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+  opacity: 0.8;
+}
+.empty-text {
+  font-size: 28rpx;
+  color: #94a3b8;
+  margin-top: 24rpx;
+}
 .simple-list-item {
   display: flex;
   justify-content: space-between;
