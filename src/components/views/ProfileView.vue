@@ -20,7 +20,7 @@
     <view class="menu-container">
       <view class="section-title">数据管理</view>
       <wd-cell-group border>
-        <wd-cell title="存储空间" icon="cloud" is-link center clickable />
+        <wd-cell title="存储空间" icon="cloud" is-link center clickable @click="navigateTo('/pages/settings/storage')" />
         <wd-cell title="备份 / 同步" icon="swap" is-link center clickable />
         <wd-cell title="导入 / 导出" icon="download" is-link center clickable />
       </wd-cell-group>
@@ -50,6 +50,10 @@ const handleUserClick = () => {
   if (!props.user) {
     uni.navigateTo({ url: '/pages/auth/login' })
   }
+}
+
+const navigateTo = (url: string) => {
+  uni.navigateTo({ url })
 }
 </script>
 

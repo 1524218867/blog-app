@@ -893,12 +893,12 @@ onMounted(() => {
 }
 
 .music-list {
-  padding: 0 24rpx 24rpx 24rpx;
+  padding: 0 0 24rpx 0;
 }
 .song-item {
   display: flex;
   align-items: center;
-  padding: 16rpx 0;
+  padding: 16rpx 24rpx;
   border-bottom: 1px solid #f1f5f9;
 }
 .song-item:active {
@@ -921,6 +921,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   position: relative;
+  flex-shrink: 0;
 }
 .cover-image {
   width: 100%;
@@ -996,7 +997,7 @@ onMounted(() => {
 .artist-header {
   display: flex;
   align-items: center;
-  padding: 16rpx 0;
+  padding: 16rpx 24rpx;
   margin-bottom: 16rpx;
   gap: 16rpx;
 }
@@ -1006,12 +1007,12 @@ onMounted(() => {
   color: #1e293b;
 }
 .artist-list {
-  padding: 0 24rpx 24rpx 24rpx;
+  padding: 0 0 24rpx 0;
 }
 .artist-item {
   display: flex;
   align-items: center;
-  padding: 24rpx 0;
+  padding: 24rpx 24rpx;
   border-bottom: 1px solid #f1f5f9;
 }
 .artist-icon {

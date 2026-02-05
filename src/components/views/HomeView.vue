@@ -53,7 +53,13 @@
         </view>
         <scroll-view scroll-x class="horizontal-scroll" :show-scrollbar="false">
           <view class="horizontal-list">
-            <view v-for="item in recentlyUsed" :key="item.id" class="card-item" @click="handleItemClick(item)">
+            <view 
+              v-for="item in recentlyUsed" 
+              :key="item.id" 
+              class="card-item" 
+              @click="handleItemClick(item)"
+              @longpress="handleHistoryLongPress(item)"
+            >
               <view class="card-cover-box">
                 <image v-if="item.cover" :src="item.cover" mode="aspectFill" class="card-cover" />
                 <view v-else class="card-cover-placeholder" :class="item.type">
@@ -82,23 +88,32 @@
           <text class="section-title-text">⏯ 未完成</text>
         </view>
         <view class="list-container">
-          <view v-for="item in unfinishedList" :key="item.id" class="list-item" @click="handleItemClick(item)">
-             <view class="list-icon-box" :class="item.type">
-               <wd-icon v-if="item.type === 'article'" name="list" size="20px" :color="getTypeColor(item.type)" />
-               <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" :color="getTypeColor(item.type)" />
-               <wd-icon v-else-if="item.type === 'audio'" name="sound" size="20px" :color="getTypeColor(item.type)" />
-               <wd-icon v-else name="image" size="20px" :color="getTypeColor(item.type)" />
-             </view>
-             <view class="list-content">
-               <text class="list-title">{{ item.title }}</text>
-               <view class="progress-bar-bg">
-                 <view class="progress-bar-fill" :style="{ width: (item.progress || 0) + '%', backgroundColor: getTypeColor(item.type) }"></view>
-               </view>
-               <text class="list-subtitle">已进行 {{ item.progress }}%</text>
-             </view>
-             <view class="play-btn">
-               <wd-icon name="play-circle-filled" size="28px" :color="getTypeColor(item.type)" />
-             </view>
+          <view v-for="item in unfinishedList" :key="item.id" class="list-item-wrapper">
+            <wd-swipe-action>
+              <view class="list-item" @click="handleItemClick(item)">
+                <view class="list-icon-box" :class="item.type">
+                  <wd-icon v-if="item.type === 'article'" name="list" size="20px" :color="getTypeColor(item.type)" />
+                  <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" :color="getTypeColor(item.type)" />
+                  <wd-icon v-else-if="item.type === 'audio'" name="sound" size="20px" :color="getTypeColor(item.type)" />
+                  <wd-icon v-else name="image" size="20px" :color="getTypeColor(item.type)" />
+                </view>
+                <view class="list-content">
+                  <text class="list-title">{{ item.title }}</text>
+                  <view class="progress-bar-bg">
+                    <view class="progress-bar-fill" :style="{ width: (item.progress || 0) + '%', backgroundColor: getTypeColor(item.type) }"></view>
+                  </view>
+                  <text class="list-subtitle">已进行 {{ item.progress }}%</text>
+                </view>
+                <view class="play-btn">
+                  <wd-icon name="play-circle-filled" size="28px" :color="getTypeColor(item.type)" />
+                </view>
+              </view>
+              <template #right>
+                <view class="action-btn" @click.stop="handleDeleteHistory(item)">
+                  <view class="delete-btn">删除</view>
+                </view>
+              </template>
+            </wd-swipe-action>
           </view>
         </view>
       </view>
@@ -154,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { request, hostBase } from '@/utils/request'
 import { audioStore } from '@/store/audio'
 
@@ -319,6 +334,11 @@ const fetchData = async () => {
 
 onMounted(() => {
   fetchData()
+  uni.$on('refreshStats', fetchData)
+})
+
+onUnmounted(() => {
+  uni.$off('refreshStats', fetchData)
 })
 
 // 下拉刷新
@@ -333,9 +353,28 @@ const handlePinnedLongPress = (item: ContentItem) => {
   showActionSheet.value = true
 }
 
+const handleHistoryLongPress = (item: ContentItem) => {
+  currentActionItem.value = item
+  actionSheetActions.value = [{ name: '删除记录', color: '#fa4350' }]
+  showActionSheet.value = true
+}
+
+const handleDeleteHistory = async (item: ContentItem) => {
+  try {
+    await request(`/content/history?type=${item.type}&id=${item.id}`, 'DELETE')
+    uni.showToast({ title: '已删除', icon: 'success' })
+    fetchData()
+  } catch (error) {
+    console.error('Failed to delete history:', error)
+    uni.showToast({ title: '删除失败', icon: 'none' })
+  }
+}
+
 const handleActionSelect = async ({ item }: any) => {
   showActionSheet.value = false
-  if (item.name === '取消置顶' && currentActionItem.value) {
+  if (!currentActionItem.value) return
+
+  if (item.name === '取消置顶') {
     try {
       await request('/content/pin', 'POST', {
         type: currentActionItem.value.type,
@@ -350,6 +389,8 @@ const handleActionSelect = async ({ item }: any) => {
       console.error('Failed to unpin:', error)
       uni.showToast({ title: '操作失败', icon: 'none' })
     }
+  } else if (item.name === '删除记录') {
+    await handleDeleteHistory(currentActionItem.value)
   }
 }
 
@@ -523,13 +564,17 @@ defineExpose({
   flex-direction: column;
   gap: 24rpx;
 }
+.list-item-wrapper {
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
+  transform: translateZ(0); /* Fix iOS overflow hidden bug */
+}
 .list-item {
   display: flex;
   align-items: center;
   background: #fff;
   padding: 20rpx;
-  border-radius: 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
 }
 .list-icon-box {
   width: 88rpx;
@@ -653,5 +698,20 @@ defineExpose({
 }
 .popup-item:active {
   background-color: #f8fafc;
+}
+
+/* Swipe Action Styles */
+.action-btn {
+  height: 100%;
+}
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 32rpx;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 28rpx;
 }
 </style>

@@ -1,26 +1,35 @@
 <template>
   <view class="page-container">
     <view class="list-container">
-      <view v-for="item in historyList" :key="item.id + '_' + item.type" class="list-item" @click="handleItemClick(item)">
-         <view class="list-icon-box" :class="item.type">
-           <wd-icon v-if="item.type === 'article'" name="list" size="20px" :color="getTypeColor(item.type)" />
-           <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" :color="getTypeColor(item.type)" />
-           <wd-icon v-else-if="item.type === 'audio'" name="sound" size="20px" :color="getTypeColor(item.type)" />
-           <wd-icon v-else name="image" size="20px" :color="getTypeColor(item.type)" />
-         </view>
-         <view class="list-content">
-           <text class="list-title">{{ item.title }}</text>
-           <view v-if="(item.progress || 0) > 0 && !item.isFinished" class="progress-bar-bg">
-             <view class="progress-bar-fill" :style="{ width: (item.progress || 0) + '%', backgroundColor: getTypeColor(item.type) }"></view>
-           </view>
-           <view class="list-meta">
-             <text class="list-time">{{ formatTime(item.lastAccessTime) }}</text>
-             <text v-if="(item.progress || 0) > 0" class="list-status"> · 已进行 {{ item.progress }}%</text>
-           </view>
-         </view>
-         <view class="action-btn">
-           <wd-icon name="arrow-right" size="16px" color="#cbd5e1" />
-         </view>
+      <view v-for="item in historyList" :key="item.id + '_' + item.type" class="list-item-wrapper">
+        <wd-swipe-action>
+          <view class="list-item" @click="handleItemClick(item)">
+             <view class="list-icon-box" :class="item.type">
+               <wd-icon v-if="item.type === 'article'" name="list" size="20px" :color="getTypeColor(item.type)" />
+               <wd-icon v-else-if="item.type === 'video'" name="video" size="20px" :color="getTypeColor(item.type)" />
+               <wd-icon v-else-if="item.type === 'audio'" name="sound" size="20px" :color="getTypeColor(item.type)" />
+               <wd-icon v-else name="image" size="20px" :color="getTypeColor(item.type)" />
+             </view>
+             <view class="list-content">
+               <text class="list-title">{{ item.title }}</text>
+               <view v-if="(item.progress || 0) > 0 && !item.isFinished" class="progress-bar-bg">
+                 <view class="progress-bar-fill" :style="{ width: (item.progress || 0) + '%', backgroundColor: getTypeColor(item.type) }"></view>
+               </view>
+               <view class="list-meta">
+                 <text class="list-time">{{ formatTime(item.lastAccessTime) }}</text>
+                 <text v-if="(item.progress || 0) > 0" class="list-status"> · 已进行 {{ item.progress }}%</text>
+               </view>
+             </view>
+             <view class="action-btn-arrow">
+               <wd-icon name="arrow-right" size="16px" color="#cbd5e1" />
+             </view>
+          </view>
+          <template #right>
+            <view class="action-btn" @click.stop="handleDelete(item)">
+              <view class="delete-btn">删除</view>
+            </view>
+          </template>
+        </wd-swipe-action>
       </view>
       
       <wd-loadmore :state="loadMoreState" @reload="loadMore" />
@@ -133,6 +142,20 @@ const loadMore = () => {
   fetchData()
 }
 
+const handleDelete = async (item: ContentItem) => {
+  try {
+    await request(`/content/history?type=${item.type}&id=${item.id}`, 'DELETE')
+    uni.showToast({ title: '已删除', icon: 'success' })
+    // Remove from local list
+    historyList.value = historyList.value.filter(i => !(i.type === item.type && i.id === item.id))
+    // Notify HomeView to refresh
+    uni.$emit('refreshStats')
+  } catch (error) {
+    console.error('Failed to delete history:', error)
+    uni.showToast({ title: '删除失败', icon: 'none' })
+  }
+}
+
 // Navigation Logic (Same as HomeView)
 const handleItemClick = (item: ContentItem) => {
   if (item.type === 'article') {
@@ -194,13 +217,18 @@ onReachBottom(() => {
   gap: 24rpx;
 }
 
+.list-item-wrapper {
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
+  transform: translateZ(0); /* Fix iOS overflow hidden bug */
+}
+
 .list-item {
   display: flex;
   align-items: center;
   background: #fff;
   padding: 24rpx;
-  border-radius: 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
 }
 
 .list-icon-box {
@@ -253,5 +281,20 @@ onReachBottom(() => {
 .progress-bar-fill {
   height: 100%;
   border-radius: 3rpx;
+}
+
+/* Swipe Action */
+.action-btn {
+  height: 100%;
+}
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 32rpx;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 28rpx;
 }
 </style>

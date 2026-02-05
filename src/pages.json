@@ -40,6 +40,12 @@
 				"navigationBarTitleText": "最近使用",
 				"enablePullDownRefresh": true
 			}
+		},
+		{
+			"path": "pages/settings/storage",
+			"style": {
+				"navigationBarTitleText": "存储空间"
+			}
 		}
 	],
 	"globalStyle": {
