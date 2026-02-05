@@ -1,8 +1,6 @@
 <template>
   <view class="content-wrapper">
-    <scroll-view scroll-y class="scroll-container" :scroll-into-view="scrollIntoViewId" scroll-with-animation>
-      <view class="content">
-        <view class="card">
+    <view class="fixed-header">
       <view class="section-header">
         <view class="title">我的音乐</view>
         <view class="actions">
@@ -27,41 +25,95 @@
           <wd-icon name="search" size="22px"></wd-icon>
         </view>
       </view>
+    </view>
 
-      <!-- View Tabs -->
-      <wd-tabs v-model="activeTab" swipeable animated @change="onTabChange">
-        <wd-tab title="单曲" name="songs">
-          <view class="music-list">
-            <view v-for="(song, index) in songs" :key="song.id" :id="'song-' + song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
-              <view class="song-index">
-                <text>{{ index + 1 }}</text>
-              </view>
-              <view class="song-cover">
-                 <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
-                 <view v-else class="cover-placeholder">
-                   <wd-icon name="music" size="20px" color="#cbd5e1" />
-                 </view>
-                <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
-                  <view class="playing-icon-css">
-                    <view class="line line1"></view>
-                    <view class="line line2"></view>
-                    <view class="line line3"></view>
-                    <view class="line line4"></view>
+    <!-- Custom Tabs and Swiper Implementation -->
+    <view class="custom-tabs">
+      <view 
+        class="custom-tab-item" 
+        :class="{ active: activeTab === 'songs' }"
+        @click="activeTab = 'songs'"
+      >
+        <text>单曲</text>
+        <view class="tab-indicator" v-if="activeTab === 'songs'"></view>
+      </view>
+      <view 
+        class="custom-tab-item" 
+        :class="{ active: activeTab === 'artists' }"
+        @click="activeTab = 'artists'"
+      >
+        <text>歌手</text>
+        <view class="tab-indicator" v-if="activeTab === 'artists'"></view>
+      </view>
+      <view 
+        class="custom-tab-item" 
+        :class="{ active: activeTab === 'net' }"
+        @click="activeTab = 'net'"
+      >
+        <text>全网</text>
+        <view class="tab-indicator" v-if="activeTab === 'net'"></view>
+      </view>
+    </view>
+
+    <!-- Swiper Content -->
+    <swiper 
+      class="content-swiper"
+      :current="currentTabIndex"
+      @change="handleSwiperChange"
+      :duration="300"
+    >
+      <!-- Songs Tab -->
+      <swiper-item>
+        <view class="tab-inner">
+          <scroll-view 
+            scroll-y 
+            class="scroll-container" 
+            :scroll-top="scrollTopMap.songs" 
+            :scroll-into-view="scrollIntoViewId" 
+            scroll-with-animation 
+            @scroll="(e: any) => handleScroll(e, 'songs')"
+          >
+            <view class="music-list">
+              <view v-for="(song, index) in songs" :key="song.id" :id="'song-' + song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
+                <view class="song-index">
+                  <text>{{ index + 1 }}</text>
+                </view>
+                <view class="song-cover">
+                  <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
+                  <view v-else class="cover-placeholder">
+                    <wd-icon name="music" size="20px" color="#cbd5e1" />
+                  </view>
+                  <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
+                    <view class="playing-icon-css">
+                      <view class="line line1"></view>
+                      <view class="line line2"></view>
+                      <view class="line line3"></view>
+                      <view class="line line4"></view>
+                    </view>
                   </view>
                 </view>
-              </view>
-              <view class="song-info">
-                <view class="name-row">
-                  <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
+                <view class="song-info">
+                  <view class="name-row">
+                    <view class="song-name" :class="{ 'active': audioStore.currentSong?.id === song.id }">{{ song.name }}</view>
+                  </view>
+                  <view class="song-artist">{{ song.artist }}</view>
                 </view>
-                <view class="song-artist">{{ song.artist }}</view>
               </view>
+              <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
             </view>
-            <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
-          </view>
-        </wd-tab>
+          </scroll-view>
+        </view>
+      </swiper-item>
 
-        <wd-tab title="歌手" name="artists">
+      <!-- Artists Tab -->
+      <swiper-item>
+        <view class="tab-inner">
+          <scroll-view 
+            scroll-y 
+            class="scroll-container" 
+            :scroll-top="scrollTopMap.artists" 
+            @scroll="(e: any) => handleScroll(e, 'artists')"
+          >
           <view v-if="!searchQuery" class="artist-view">
             <view v-if="selectedArtist" class="artist-detail">
               <view class="artist-header" @click="selectedArtist = null">
@@ -140,9 +192,19 @@
             </view>
             <view v-if="songs.length === 0" class="empty-tip">未找到相关音乐</view>
           </view>
-        </wd-tab>
+        </scroll-view>
+        </view>
+      </swiper-item>
 
-        <wd-tab title="全网" name="net">
+      <!-- Net Tab -->
+      <swiper-item>
+        <view class="tab-inner">
+          <scroll-view 
+            scroll-y 
+            class="scroll-container" 
+          :scroll-top="scrollTopMap.net" 
+          @scroll="(e: any) => handleScroll(e, 'net')"
+        >
           <view class="music-list" :class="{ 'selection-mode': isSelectionMode }">
             <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="handleSongClick(song)">
               <view v-if="isSelectionMode" class="checkbox-col" @click.stop="toggleSelection(song)">
@@ -177,11 +239,10 @@
             </view>
             <view v-if="netSongs.length === 0" class="empty-tip">{{ searchQuery ? '未找到相关音乐' : '请输入歌名进行搜索' }}</view>
           </view>
-        </wd-tab>
-      </wd-tabs>
-    </view>
-      </view>
-    </scroll-view>
+          </scroll-view>
+        </view>
+      </swiper-item>
+    </swiper>
 
     <!-- Batch Action Bar -->
     <view v-if="isSelectionMode" class="batch-action-bar">
@@ -232,9 +293,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { request, apiBase } from '@/utils/request'
 import { audioStore } from '@/store/audio'
+
+const props = defineProps<{
+  user?: any
+  isActive?: boolean
+}>()
+
+const scrollTopMap = ref({ songs: 0, artists: 0, net: 0 })
+const lastScrollTopMap = ref({ songs: 0, artists: 0, net: 0 })
+
+const handleScroll = (e: any, type: 'songs' | 'artists' | 'net') => {
+  lastScrollTopMap.value[type] = e.detail.scrollTop
+}
+
+watch(() => props.isActive, (newVal) => {
+  if (newVal) {
+    const saved = { ...lastScrollTopMap.value }
+    scrollTopMap.value = { songs: -1, artists: -1, net: -1 }
+    nextTick(() => {
+      scrollTopMap.value = saved
+    })
+  }
+})
 
 interface Song {
   id: number
@@ -251,6 +334,19 @@ const songs = ref<Song[]>([])
 const netSongs = ref<Song[]>([])
 const searchQuery = ref('')
 const activeTab = ref<'songs' | 'artists' | 'net'>('songs')
+
+// Computed index for swiper
+const currentTabIndex = computed(() => {
+  const map: Record<string, number> = { 'songs': 0, 'artists': 1, 'net': 2 }
+  return map[activeTab.value] || 0
+})
+
+const handleSwiperChange = (e: any) => {
+  const index = e.detail.current
+  const map: Record<number, 'songs' | 'artists' | 'net'> = { 0: 'songs', 1: 'artists', 2: 'net' }
+  activeTab.value = map[index] || 'songs'
+}
+
 const selectedArtist = ref<string | null>(null)
 const isSelectionMode = ref(false)
 const selectedNetSongs = ref<Song[]>([])
@@ -264,76 +360,73 @@ const currentActionSong = ref<Song | null>(null)
 const actionSheetType = ref<'delete' | 'addToGroup' | 'batchAddToGroup'>('delete')
 
 const artistGroups = ref<any[]>([])
-  const artistSongs = ref<Song[]>([])
-  
-  const fetchArtistGroups = async () => {
-    try {
-      const data = await request('/audio-groups')
-      if (Array.isArray(data)) {
-        artistGroups.value = data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          count: item.audioCount || 0,
-          cover: item.cover ? (item.cover.startsWith('http') ? item.cover : `${apiBase}${item.cover}`) : ''
-        }))
-        // Add "Unknown Artist" group manually if needed, or handle it separately
-        // User mentioned ?group_id=null for ungrouped
-        const ungroupedData = await request('/audios?group_id=null')
-        if (Array.isArray(ungroupedData) && ungroupedData.length > 0) {
-           artistGroups.value.push({
-             id: 'null',
-             name: '未分组',
-             count: ungroupedData.length,
-             cover: ''
-           })
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch groups:', error)
-    }
-  }
+const artistSongs = ref<Song[]>([])
 
-  const fetchSongsByGroup = async (groupId: string | number) => {
-    try {
-      const url = groupId === 'null' ? '/audios?group_id=null' : `/audios?group_id=${groupId}`
-      const data = await request(url)
-      const list = Array.isArray(data) ? data : []
-      artistSongs.value = list.map((item: any) => ({
+const fetchArtistGroups = async () => {
+  try {
+    const data = await request('/audio-groups')
+    if (Array.isArray(data)) {
+      artistGroups.value = data.map((item: any) => ({
         id: item.id,
-        name: item.filename.replace(/\.[^/.]+$/, ""),
-        artist: item.singer || 'Unknown Artist',
-        url: item.url.startsWith('http') ? item.url : `${apiBase}${item.url}`,
-        coverUrl: item.cover ? (item.cover.startsWith('http') ? item.cover : `${apiBase}${item.cover}`) : '',
-        lyrics: item.lyrics || ''
+        name: item.name,
+        count: item.audioCount || 0,
+        cover: item.cover ? (item.cover.startsWith('http') ? item.cover : `${apiBase}${item.cover}`) : ''
       }))
-    } catch (error) {
-      console.error('Failed to fetch group songs:', error)
+      // Add "Unknown Artist" group manually if needed
+      const ungroupedData = await request('/audios?group_id=null')
+      if (Array.isArray(ungroupedData) && ungroupedData.length > 0) {
+          artistGroups.value.push({
+            id: 'null',
+            name: '未分组',
+            count: ungroupedData.length,
+            cover: ''
+          })
+      }
     }
+  } catch (error) {
+    console.error('Failed to fetch groups:', error)
   }
+}
 
-  const switchTab = (tab: 'songs' | 'artists' | 'net') => {
-    // Clear search query when switching tabs to avoid empty views due to filtering
-    searchQuery.value = ''
-    activeTab.value = tab
-    selectedArtist.value = null
-    if (tab === 'artists') {
-      fetchArtistGroups()
-    } else if (tab === 'net') {
-      // Net tab logic
-      netSongs.value = []
-    } else {
-      fetchSongs() // Refresh all songs when switching back
-    }
+const fetchSongsByGroup = async (groupId: string | number) => {
+  try {
+    const url = groupId === 'null' ? '/audios?group_id=null' : `/audios?group_id=${groupId}`
+    const data = await request(url)
+    const list = Array.isArray(data) ? data : []
+    artistSongs.value = list.map((item: any) => ({
+      id: item.id,
+      name: item.filename.replace(/\.[^/.]+$/, ""),
+      artist: item.singer || 'Unknown Artist',
+      url: item.url.startsWith('http') ? item.url : `${apiBase}${item.url}`,
+      coverUrl: item.cover ? (item.cover.startsWith('http') ? item.cover : `${apiBase}${item.cover}`) : '',
+      lyrics: item.lyrics || ''
+    }))
+  } catch (error) {
+    console.error('Failed to fetch group songs:', error)
   }
+}
+
+// Watch activeTab to handle data loading and state reset
+watch(activeTab, (newVal) => {
+  // Clear search query when switching tabs to avoid empty views due to filtering
+  searchQuery.value = ''
+  selectedArtist.value = null
+  isSelectionMode.value = false // Reset selection mode when switching tabs
   
-  const selectArtist = (artistGroup: any) => {
-    selectedArtist.value = artistGroup.name
-    fetchSongsByGroup(artistGroup.id)
+  if (newVal === 'artists') {
+    fetchArtistGroups()
+  } else if (newVal === 'net') {
+    // Net tab logic
+    netSongs.value = []
+  } else {
+    fetchSongs() // Refresh all songs when switching back
   }
+})
 
-  const onTabChange = (e: { index: number, name: 'songs' | 'artists' | 'net' }) => {
-    switchTab(e.name)
-  }
+const selectArtist = (artistGroup: any) => {
+  selectedArtist.value = artistGroup.name
+  fetchSongsByGroup(artistGroup.id)
+}
 
 const searchNetMusic = async () => {
   if (!searchQuery.value.trim()) return
@@ -380,18 +473,13 @@ const searchNetMusic = async () => {
 }
 
 const fetchCoversForList = async () => {
-  // Fetch details for each song to get cover image
-  // Use a small delay or concurrency control if needed, but for now simple iteration
-  // We don't await the loop because we want it to happen in background
   const songsToFetch = [...netSongs.value]
   for (const song of songsToFetch) {
-    // Check if song is still in the current list (user might have searched again)
+    // Check if song is still in the current list
     if (!netSongs.value.find(s => s.id === song.id)) continue
     
     try {
       await ensureSongDetails(song)
-      // Optional: delay to be gentle on the API
-      // await new Promise(resolve => setTimeout(resolve, 100))
     } catch (e) {
       console.error(e)
     }
@@ -511,29 +599,9 @@ const handleActionSelect = async ({ item }: any) => {
     }
   } else if (actionSheetType.value === 'addToGroup') {
     if (!currentActionSong.value) return
-    const song = currentActionSong.value
-    const groupId = item.id
-    
-    uni.showLoading({ title: '添加中...' })
-    try {
-      await request('/audios/link', 'POST', {
-         url: song.url,
-         filename: song.name,
-         singer: song.artist,
-         cover: song.coverUrl,
-         lyrics: song.lyrics,
-         group_id: groupId
-      })
-      uni.showToast({ title: '已加入我的音乐', icon: 'success' })
-    } catch (error) {
-      console.error('Add to favorites error:', error)
-      uni.showToast({ title: '添加失败', icon: 'none' })
-    } finally {
-      uni.hideLoading()
-    }
+    await saveNetSong(currentActionSong.value, item.id)
   } else if (actionSheetType.value === 'batchAddToGroup') {
-    const groupId = item.id
-    await processBatchAdd(groupId)
+    await batchSaveNetSongs(item.id)
   }
 }
 
@@ -543,103 +611,63 @@ const deleteSong = async (song: Song) => {
     content: `确定要删除 "${song.name}" 吗？`,
     success: async (res) => {
       if (res.confirm) {
-        uni.showLoading({ title: '删除中...' })
         try {
           await request(`/audios/${song.id}`, 'DELETE')
           uni.showToast({ title: '删除成功', icon: 'success' })
           
-          // Remove from local lists
-          songs.value = songs.value.filter(s => s.id !== song.id)
-          artistSongs.value = artistSongs.value.filter(s => s.id !== song.id)
-          
-          // If currently playing song is deleted, maybe stop or next?
-          // For now, let's just leave it playing or let the user handle it.
-          
+          if (activeTab.value === 'artists' && selectedArtist.value) {
+            // Re-fetch current artist's songs
+            const group = artistGroups.value.find(g => g.name === selectedArtist.value)
+            if (group) fetchSongsByGroup(group.id)
+          } else {
+            fetchSongs()
+          }
         } catch (error) {
-          console.error('Delete song error:', error)
+          console.error('Failed to delete song:', error)
           uni.showToast({ title: '删除失败', icon: 'none' })
-        } finally {
-          uni.hideLoading()
         }
       }
     }
   })
 }
 
-const playSong = async (song: Song) => {
-  // Check if we need to fetch details (lazy load for net songs)
-  if (activeTab.value === 'net' && song.n && !song.url) {
-    uni.showLoading({ title: '获取播放地址...' })
-    const success = await ensureSongDetails(song)
-    uni.hideLoading()
-    
-    if (!success) {
-      uni.showToast({ title: '无法获取播放地址', icon: 'none' })
-      return
-    }
-  }
-
-  // If in artist view, playlist should probably be just that artist's songs?
-  // Or all songs? Usually context matters.
-  // Let's set playlist to the currently visible list.
-  if (activeTab.value === 'artists' && selectedArtist.value) {
-    audioStore.setPlayList(artistSongs.value)
-  } else if (activeTab.value === 'net') {
-    audioStore.setPlayList(netSongs.value)
-  } else if (searchQuery.value) {
-     audioStore.setPlayList(songs.value) // Search results
-  } else {
-    // All songs tab
-    audioStore.setPlayList(songs.value)
-  }
-  
-  if (song.url) {
-    audioStore.play(song)
-    audioStore.showFullScreen = true
-  }
+const playSong = (song: Song) => {
+  audioStore.play(song)
 }
 
 const playAll = () => {
-  let listToPlay: Song[] = []
-  
-  if (activeTab.value === 'net') {
-    listToPlay = netSongs.value
-  } else if (searchQuery.value) {
-    listToPlay = songs.value
-  } else if (activeTab.value === 'artists') {
-    if (selectedArtist.value) {
-      listToPlay = artistSongs.value
-    } else {
-      // In artist list view, play all?
-      listToPlay = songs.value
-    }
-  } else {
-    listToPlay = songs.value
-  }
-
-  if (listToPlay.length > 0) {
-    audioStore.setPlayList(listToPlay)
-    audioStore.play(listToPlay[0])
-    audioStore.showFullScreen = true
+  if (songs.value.length > 0) {
+    audioStore.setPlayList(songs.value)
+    audioStore.play(songs.value[0])
   }
 }
 
+const scrollToCurrentSong = () => {
+  if (audioStore.currentSong) {
+    scrollIntoViewId.value = 'song-' + audioStore.currentSong.id
+    // Reset after a short delay so it can be triggered again
+    setTimeout(() => {
+      scrollIntoViewId.value = ''
+    }, 1000)
+  }
+}
+
+// Net Music Selection Mode
 const toggleSelectionMode = () => {
   isSelectionMode.value = !isSelectionMode.value
   selectedNetSongs.value = []
 }
 
+const isSelected = (song: Song) => {
+  return selectedNetSongs.value.some(s => s.id === song.id)
+}
+
 const toggleSelection = (song: Song) => {
-  const index = selectedNetSongs.value.findIndex(s => s.id === song.id)
-  if (index > -1) {
-    selectedNetSongs.value.splice(index, 1)
+  if (isSelected(song)) {
+    selectedNetSongs.value = selectedNetSongs.value.filter(s => s.id !== song.id)
   } else {
     selectedNetSongs.value.push(song)
   }
-}
-
-const isSelected = (song: Song) => {
-  return selectedNetSongs.value.some(s => s.id === song.id)
 }
 
 const toggleSelectAll = () => {
@@ -660,10 +688,10 @@ const handleSongClick = (song: Song) => {
 
 const batchAddToGroup = async () => {
   if (selectedNetSongs.value.length === 0) return
-
+  
   uni.showLoading({ title: '准备中...' })
   
-  // Fetch available groups (reuse logic)
+  // Fetch available groups
   let groups: any[] = []
   try {
     const data = await request('/audio-groups')
@@ -676,7 +704,6 @@ const batchAddToGroup = async () => {
   
   uni.hideLoading()
   
-  // Show Popup
   actionSheetType.value = 'batchAddToGroup'
   actionSheetActions.value = [
     { name: '默认（未分组）', id: null },
@@ -685,86 +712,61 @@ const batchAddToGroup = async () => {
   showActionSheet.value = true
 }
 
-const processBatchAdd = async (groupId: number | null) => {
-  uni.showLoading({ title: '处理中...', mask: true })
-  
-  // 1. Filter duplicates
-  // Refresh local songs to ensure up-to-date check
-  await fetchSongs()
-  const existingKeys = new Set(songs.value.map(s => `${s.name}-${s.artist}`))
-  
-  const songsToAdd = []
-  let duplicateCount = 0
+const saveNetSong = async (song: Song, groupId: string | null) => {
+  uni.showLoading({ title: '保存中...' })
+  try {
+    // Ensure we have details
+    const hasDetails = await ensureSongDetails(song)
+    if (!hasDetails) throw new Error('Cannot get song details')
+    
+    // Download cover to get a temp path or use URL directly if backend supports it
+    // Assuming backend takes URL
+    
+    await request('/audios', 'POST', {
+      filename: song.name, // We use filename as title usually
+      singer: song.artist,
+      url: song.url,
+      cover: song.coverUrl,
+      lyrics: song.lyrics,
+      group_id: groupId
+    })
+    
+    uni.showToast({ title: '添加成功', icon: 'success' })
+  } catch (e) {
+    console.error(e)
+    uni.showToast({ title: '添加失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+  }
+}
+
+const batchSaveNetSongs = async (groupId: string | null) => {
+  uni.showLoading({ title: '正在保存...' })
+  let successCount = 0
   
   for (const song of selectedNetSongs.value) {
-    const key = `${song.name}-${song.artist}`
-    if (existingKeys.has(key)) {
-      duplicateCount++
-    } else {
-      songsToAdd.push(song)
-    }
-  }
-
-  if (songsToAdd.length === 0) {
-    uni.hideLoading()
-    uni.showToast({
-      title: `所有选中歌曲已存在 (${duplicateCount}首重复)`,
-      icon: 'none',
-      duration: 2000
-    })
-    isSelectionMode.value = false
-    selectedNetSongs.value = []
-    return
-  }
-
-  uni.showLoading({ title: `添加中(跳过${duplicateCount}首重复)...`, mask: true })
-  
-  let successCount = 0
-  let failCount = 0
-  
-  for (const song of songsToAdd) {
     try {
-      // 2. Ensure details
       const hasDetails = await ensureSongDetails(song)
-      if (!hasDetails) {
-        failCount++
-        continue
+      if (hasDetails) {
+        await request('/audios', 'POST', {
+          filename: song.name,
+          singer: song.artist,
+          url: song.url,
+          cover: song.coverUrl,
+          lyrics: song.lyrics,
+          group_id: groupId
+        })
+        successCount++
       }
-      
-      // 3. Add
-      await request('/audios/link', 'POST', {
-           url: song.url,
-           filename: song.name,
-           singer: song.artist,
-           cover: song.coverUrl,
-           lyrics: song.lyrics,
-           group_id: groupId
-      })
-      successCount++
     } catch (e) {
       console.error(e)
-      failCount++
     }
   }
   
   uni.hideLoading()
-  uni.showToast({
-    title: `成功${successCount}，失败${failCount}，跳过重复${duplicateCount}`,
-    icon: 'none',
-    duration: 3000
-  })
-  
-  // Refresh list to show new songs if needed (though we are in net tab)
-  await fetchSongs()
-  
-  // Exit selection mode
+  uni.showToast({ title: `成功保存 ${successCount} 首`, icon: 'none' })
   isSelectionMode.value = false
   selectedNetSongs.value = []
-}
-
-const scrollToCurrentSong = () => {
-  if (!audioStore.currentSong) return
-  scrollIntoViewId.value = `song-${audioStore.currentSong.id}`
 }
 
 onMounted(() => {
@@ -777,55 +779,13 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  position: relative;
 }
-.scroll-container {
-  flex: 1;
-  height: 0;
-  width: 100%;
-}
-.locate-fab {
-  position: fixed;
-  right: 20px;
-  bottom: 180px; /* Above the tab bar */
-  width: 36px;
-  height: 36px;
-  background-color: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  z-index: 99;
-  transition: all 0.3s ease;
-}
-
-.locate-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.locate-fab:active {
-  transform: scale(0.9);
-  background-color: #f8fafc;
-}
-
-.content {
-  /* padding: 16px; */
-  padding-bottom: 100px; /* Add padding for bottom tab bar */
-  min-height: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-.card {
-  flex: 1;
+.fixed-header {
   background: #ffffff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 24rpx;
-  min-height: 400rpx;
-  box-sizing: border-box;
+  padding: 24rpx 24rpx 0 24rpx;
+  border-top-left-radius: 16rpx;
+  border-top-right-radius: 16rpx;
+  z-index: 10;
 }
 .section-header {
   display: flex;
@@ -842,11 +802,8 @@ onMounted(() => {
   gap: 16rpx;
 }
 .action-btn {
-  font-size: 26rpx;
-  color: #3b5bdb;
-  background: #e0e7ff;
-  padding: 8rpx 20rpx;
-  border-radius: 999rpx;
+  font-size: 28rpx;
+  color: #3b82f6;
 }
 .search-box {
   background: #f1f5f9;
@@ -866,92 +823,100 @@ onMounted(() => {
   color: #94a3b8;
 }
 
+:deep(.fab-action-btn) {
+  min-width: auto !important;
+  box-sizing: border-box;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 16px !important;
+  margin: 8rpx;
+}
 
-/* Artist List */
-.artist-list {
+/* Custom Tabs Styles */
+.custom-tabs {
   display: flex;
-  flex-direction: column;
+  background: #fff;
+  border-bottom: 1px solid #f1f5f9;
+  z-index: 10;
 }
-.artist-item {
-  display: flex;
-  align-items: center;
+.custom-tab-item {
+  flex: 1;
+  text-align: center;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #f1f5f9;
+  font-size: 28rpx;
+  color: #64748b;
+  position: relative;
+  font-weight: 500;
 }
-.artist-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16px;
-  flex-shrink: 0;
+.custom-tab-item.active {
+  color: #3b82f6;
+  font-weight: 600;
+}
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: #3b82f6;
+  border-radius: 2rpx;
+}
+
+/* Swiper Styles */
+.content-swiper {
+  flex: 1;
+  height: 0; /* Critical for flex expansion */
+  width: 100%;
   overflow: hidden;
 }
-
-.group-cover-img {
-  width: 100%;
+.content-swiper swiper-item {
   height: 100%;
-  object-fit: cover;
-}
-.artist-info {
-  flex: 1;
-}
-.artist-name {
-  font-size: 30rpx;
-  color: #1e293b;
-  font-weight: 500;
-  display: block;
-  margin-bottom: 4rpx;
-}
-.artist-count {
-  font-size: 24rpx;
-  color: #94a3b8;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
-/* Artist Detail Header */
-.artist-header {
+.tab-inner {
+  height: 100%;
+  width: 100%;
+  background-color: #fff;
   display: flex;
-  align-items: center;
-  padding: 16rpx 0;
-  margin-bottom: 16rpx;
-  border-bottom: 1rpx solid #f1f5f9;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
-.artist-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  margin-left: 16rpx;
-  color: #1e293b;
+.scroll-container {
+  flex: 1;
+  height: 0;
+  width: 100%;
 }
 
 .music-list {
-  display: flex;
-  flex-direction: column;
+  padding: 0 24rpx 24rpx 24rpx;
 }
 .song-item {
   display: flex;
   align-items: center;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
 }
-.song-item:last-child {
-  border-bottom: none;
+.song-item:active {
+  background-color: #f8fafc;
 }
 .song-index {
   width: 60rpx;
   text-align: center;
-  font-size: 28rpx;
   color: #94a3b8;
+  font-size: 28rpx;
 }
 .song-cover {
   width: 80rpx;
   height: 80rpx;
   border-radius: 8rpx;
   overflow: hidden;
-  margin-right: 20rpx;
   background: #f1f5f9;
+  margin-right: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -960,56 +925,6 @@ onMounted(() => {
 .cover-image {
   width: 100%;
   height: 100%;
-}
-.cover-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.playing-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
-
-.playing-icon-css {
-  display: flex;
-  align-items: flex-end;
-  height: 30rpx;
-  gap: 6rpx;
-}
-
-.playing-icon-css .line {
-  width: 6rpx;
-  background-color: #000000;
-  border-radius: 4rpx;
-  animation: equalize 1s infinite ease-in-out;
-}
-
-.playing-icon-css .line1 { animation-delay: 0s; height: 40%; }
-.playing-icon-css .line2 { animation-delay: 0.2s; height: 100%; }
-.playing-icon-css .line3 { animation-delay: 0.4s; height: 60%; }
-.playing-icon-css .line4 { animation-delay: 0.1s; height: 80%; }
-
-@keyframes equalize {
-  0% { height: 30%; }
-  50% { height: 100%; }
-  100% { height: 30%; }
-}
-
-.playing-icon {
-  width: 40rpx;
-  height: 40rpx;
 }
 .song-info {
   flex: 1;
@@ -1021,25 +936,55 @@ onMounted(() => {
   margin-bottom: 4rpx;
 }
 .song-name {
-  font-size: 30rpx;
+  font-size: 28rpx;
   color: #1e293b;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .song-name.active {
-  color: #3b5bdb;
-  font-weight: 500;
+  color: #3b82f6;
 }
-/* Playing Animation removed */
-
 .song-artist {
   font-size: 24rpx;
-  color: #94a3b8;
+  color: #64748b;
 }
-.song-actions {
-  padding: 0 16rpx;
+.playing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+/* Playing Animation */
+.playing-icon-css {
+  display: flex;
+  align-items: flex-end;
+  height: 12px;
+  gap: 2px;
+}
+.playing-icon-css .line {
+  width: 2px;
+  background-color: #fff;
+  animation: equalize 1s infinite;
+}
+.playing-icon-css .line1 { animation-delay: 0.2s; height: 6px; }
+.playing-icon-css .line2 { animation-delay: 0.4s; height: 10px; }
+.playing-icon-css .line3 { animation-delay: 0.6s; height: 8px; }
+.playing-icon-css .line4 { animation-delay: 0.8s; height: 5px; }
+
+@keyframes equalize {
+  0% { height: 4px; }
+  50% { height: 12px; }
+  100% { height: 4px; }
+}
+
 .empty-tip {
   text-align: center;
   color: #94a3b8;
@@ -1047,78 +992,123 @@ onMounted(() => {
   font-size: 28rpx;
 }
 
-.music-list.selection-mode {
-  padding-bottom: calc(300rpx + env(safe-area-inset-bottom)); /* Ensure content is visible above floating bar */
-}
-
-.checkbox-col {
+/* Artist View */
+.artist-header {
   display: flex;
   align-items: center;
-  margin-right: 24rpx;
-}
-
-.batch-action-bar {
-  position: fixed;
-  bottom: calc(180rpx + env(safe-area-inset-bottom)); /* Float above TabBar (approx 168rpx height) */
-  left: 24rpx;
-  right: 24rpx;
-  height: 110rpx;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 24rpx;
-  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.12);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32rpx;
-  z-index: 999;
-  /* Removed extra padding-bottom since it's floating */
-}
-
-.batch-left, .batch-right {
-  display: flex;
-  align-items: center;
-  height: 100%;
-}
-
-.batch-left {
+  padding: 16rpx 0;
+  margin-bottom: 16rpx;
   gap: 16rpx;
 }
-
-.select-all-text {
-  font-size: 28rpx;
+.artist-title {
+  font-size: 32rpx;
+  font-weight: 600;
   color: #1e293b;
 }
+.artist-list {
+  padding: 0 24rpx 24rpx 24rpx;
+}
+.artist-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.artist-icon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+  overflow: hidden;
+}
+.group-cover-img {
+  width: 100%;
+  height: 100%;
+}
+.artist-info {
+  flex: 1;
+}
+.artist-name {
+  display: block;
+  font-size: 30rpx;
+  color: #1e293b;
+  font-weight: 500;
+  margin-bottom: 4rpx;
+}
+.artist-count {
+  font-size: 24rpx;
+  color: #94a3b8;
+}
 
+/* Net Music Selection */
+.checkbox-col {
+  margin-right: 20rpx;
+  display: flex;
+  align-items: center;
+}
+.batch-action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 20rpx 30rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
+  z-index: 100;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+.batch-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.select-all-text {
+  font-size: 28rpx;
+  color: #333;
+}
 .selected-count {
   font-size: 24rpx;
-  color: #64748b;
-  margin-left: 12rpx;
+  color: #999;
 }
-
 .batch-btn {
-  padding: 16rpx 40rpx;
-  border-radius: 999rpx;
+  padding: 12rpx 32rpx;
+  border-radius: 30rpx;
   font-size: 28rpx;
-  font-weight: 500;
-  transition: opacity 0.2s;
+  color: #fff;
+  background: #3b82f6;
 }
-
-.batch-btn:active {
-  opacity: 0.8;
-}
-
-.batch-btn.confirm {
-  background: #3b5bdb;
-  color: #ffffff;
-}
-
 .batch-btn.disabled {
   background: #cbd5e1;
-  color: #f1f5f9;
-  pointer-events: none;
 }
-/* Popup Menu Styles */
+
+/* Locate FAB */
+.locate-fab {
+  position: absolute;
+  right: 32rpx;
+  bottom: 120rpx;
+  width: 80rpx;
+  height: 80rpx;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.locate-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+/* Popup Menu */
 .popup-menu {
   width: 100%;
   background: #fff;

@@ -1,27 +1,33 @@
 <template>
   <view class="content-wrapper">
-    <scroll-view scroll-y class="scroll-container">
-      <view class="content">
-        <view class="card">
-        <view class="section-header-row">
-          <view class="title">全部文章</view>
+    <view class="fixed-header">
+      <view class="section-header-row">
+        <view class="title">全部文章</view>
+      </view>
+      
+      <!-- Search Box -->
+      <view class="search-box">
+        <input 
+          class="search-input" 
+          v-model="searchQuery" 
+          placeholder="搜索文章标题或内容..." 
+          confirm-type="search"
+          @confirm="fetchPosts"
+          @input="handleSearchInput"
+        />
+        <view class="search-icon">
+          <wd-icon name="search1" size="22px"></wd-icon>
         </view>
-        
-        <!-- Search Box -->
-        <view class="search-box">
-          <input 
-            class="search-input" 
-            v-model="searchQuery" 
-            placeholder="搜索文章标题或内容..." 
-            confirm-type="search"
-            @confirm="fetchPosts"
-            @input="handleSearchInput"
-          />
-          <view class="search-icon">
-            <wd-icon name="search1" size="22px"></wd-icon>
-          </view>
-        </view>
+      </view>
+    </view>
 
+    <scroll-view 
+      scroll-y 
+      class="scroll-container" 
+      :scroll-top="scrollTop"
+      @scroll="handleScroll"
+    >
+      <view class="content">
         <view class="list">
           <view v-for="post in posts" :key="post.id" class="list-item" @click="goDetail(post.id)" @longpress="handleLongPress(post)">
             <view class="post-content">
@@ -34,7 +40,6 @@
           <view v-if="posts.length === 0" class="empty-tip">未找到相关文章</view>
         </view>
       </view>
-    </view>
     </scroll-view>
 
     <!-- Floating Action Button -->
@@ -74,8 +79,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { request } from '@/utils/request'
+
+const props = defineProps<{
+  isActive?: boolean
+}>()
+
+const scrollTop = ref(0)
+const lastScrollTop = ref(0)
+
+const handleScroll = (e: any) => {
+  lastScrollTop.value = e.detail.scrollTop
+}
+
+watch(() => props.isActive, (newVal) => {
+  if (newVal) {
+    scrollTop.value = -1
+    nextTick(() => {
+      scrollTop.value = lastScrollTop.value
+    })
+  }
+})
 
 interface Post {
   id: number
@@ -215,26 +240,31 @@ onUnmounted(() => {
   flex-direction: column;
   position: relative;
 }
+.fixed-header {
+  background: #ffffff;
+  padding: 24rpx 24rpx 0 24rpx;
+  border-top-left-radius: 16rpx;
+  border-top-right-radius: 16rpx;
+  z-index: 10;
+}
 .scroll-container {
   flex: 1;
   height: 0;
   width: 100%;
+  background: #ffffff;
+  border-bottom-left-radius: 16rpx;
+  border-bottom-right-radius: 16rpx;
 }
 .content {
   width: 100%;
   min-height: 100%;
-  padding-bottom: 20rpx;
+  padding: 0 24rpx 24rpx 24rpx;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
 .card {
-  flex: 1;
-  background: #ffffff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 24rpx;
-  box-sizing: border-box;
+  /* Removed as layout changed */
 }
 .title {
   font-size: 32rpx;

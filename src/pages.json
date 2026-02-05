@@ -33,6 +33,13 @@
 				"navigationBarBackgroundColor": "#000000",
 				"navigationBarTextStyle": "white"
 			}
+		},
+		{
+			"path": "pages/history/index",
+			"style": {
+				"navigationBarTitleText": "最近使用",
+				"enablePullDownRefresh": true
+			}
 		}
 	],
 	"globalStyle": {

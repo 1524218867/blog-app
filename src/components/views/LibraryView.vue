@@ -30,6 +30,7 @@
         v-show="currentTab === 1" 
         class="view-container"
         :user="user" 
+        :is-active="currentTab === 1"
         @refresh="$emit('refresh')" 
         @logout="$emit('logout')" 
       />
@@ -38,6 +39,7 @@
         v-show="currentTab === 2" 
         class="view-container"
         :user="user" 
+        :is-active="currentTab === 2"
         @refresh="$emit('refresh')" 
         @logout="$emit('logout')" 
       />
@@ -46,6 +48,7 @@
         v-show="currentTab === 3" 
         class="view-container"
         :user="user" 
+        :is-active="currentTab === 3"
         @refresh="$emit('refresh')" 
         @logout="$emit('logout')" 
       />

@@ -1,5 +1,5 @@
 <template>
-  <view class="content">
+  <view class="content-wrapper">
     <!-- 1. 全局搜索 -->
     <view class="search-section">
       <wd-search 
@@ -13,6 +13,7 @@
     </view>
 
     <scroll-view scroll-y class="main-scroll" :show-scrollbar="false">
+      <view class="scroll-content">
       
       <!-- 5. 置顶内容 (Pinned) - Optional -->
       <view v-if="pinnedList.length > 0" class="section">
@@ -126,8 +127,7 @@
         <text class="empty-text">暂无内容，快去库里添加吧</text>
       </view>
 
-      <!-- Spacer for bottom tab bar -->
-      <view style="height: 100px;"></view>
+      </view>
     </scroll-view>
 
     <!-- Popup Action Sheet -->
@@ -156,6 +156,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { request, hostBase } from '@/utils/request'
+import { audioStore } from '@/store/audio'
 
 // --- Types ---
 interface ContentItem {
@@ -243,10 +244,9 @@ const handleClear = () => {
 
 const handleItemClick = (item: ContentItem) => {
   console.log('Clicked item:', item)
-  // TODO: Navigate to detail page based on item.type
-  let url = ''
+  
   if (item.type === 'article') {
-    url = `/pages/article/detail?id=${item.id}`
+    uni.navigateTo({ url: `/pages/article/detail?id=${item.id}` })
   } else if (item.type === 'video') {
     const params = [
       `id=${item.id}`,
@@ -254,19 +254,39 @@ const handleItemClick = (item: ContentItem) => {
       item.cover ? `cover=${encodeURIComponent(item.cover)}` : '',
       item.title ? `title=${encodeURIComponent(item.title)}` : ''
     ].filter(Boolean).join('&')
-    url = `/pages/media/video?${params}`
+    uni.navigateTo({ url: `/pages/media/video?${params}` })
+  } else if (item.type === 'audio') {
+    // Construct Song object
+    const song = {
+      id: Number(item.id),
+      name: item.title,
+      artist: item.desc || 'Unknown Artist',
+      url: item.url || '',
+      coverUrl: item.cover
+    }
+    // Play and open full player
+    audioStore.play(song)
+    audioStore.showFullScreen = true
+  } else if (item.type === 'image') {
+    if (item.url) {
+      uni.previewImage({
+        urls: [item.url],
+        current: item.url
+      })
+    } else {
+      uni.showToast({ title: '无效的图片链接', icon: 'none' })
+    }
   } else {
     uni.showToast({ title: '功能开发中', icon: 'none' })
-    return
-  }
-  
-  if (url) {
-    uni.navigateTo({ url })
   }
 }
 
 const viewMore = (section: string) => {
-  uni.showToast({ title: '查看更多开发中', icon: 'none' })
+  if (section === 'history') {
+    uni.navigateTo({ url: '/pages/history/index' })
+  } else {
+    uni.showToast({ title: '查看更多开发中', icon: 'none' })
+  }
 }
 
 const processList = (list: any[]): ContentItem[] => {
@@ -340,14 +360,24 @@ defineExpose({
 </script>
 
 <style scoped>
-.content {
+.content-wrapper {
   width: 100%;
-  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
 }
 
 .main-scroll {
-  height: calc(100vh - 120rpx); /* Adjust based on search height */
+  flex: 1;
+  height: 0;
+  width: 100%;
+}
+
+.scroll-content {
+  padding-bottom: 100px; /* Space for bottom tab bar */
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 /* Search */
