@@ -21,7 +21,7 @@
       <view v-if="currentTab === 0" class="all-content">
         <!-- TODO: Implement aggregation of all content -->
         <view class="placeholder-container">
-          <wd-icon name="app" size="48px" color="#9ca3af"></wd-icon>
+          <wd-icon name="app" size="48px" custom-style="color: var(--text-color-placeholder, #9ca3af)"></wd-icon>
           <text class="placeholder-text">全部内容聚合视图 (开发中)</text>
         </view>
       </view>
@@ -79,11 +79,12 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
   height: 100vh;
   padding-bottom: 100px; /* Space for bottom tab bar */
   box-sizing: border-box;
+  background-color: var(--bg-color, #f8fafc);
 }
 
 .library-header {
   padding-top: var(--status-bar-height);
-  background-color: #fff;
+  background-color: var(--bg-color-card, #fff);
   z-index: 10;
   position: sticky;
   top: 0;
@@ -92,7 +93,7 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
 .library-tabs {
   white-space: nowrap;
   width: 100%;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-color, #f3f4f6);
 }
 
 .tab-item {
@@ -100,12 +101,12 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
   padding: 16px 20px;
   position: relative;
   font-size: 16px;
-  color: #6b7280;
+  color: var(--text-color-secondary, #6b7280);
   transition: all 0.3s;
 }
 
 .tab-item.active {
-  color: #3b82f6;
+  color: var(--primary-color, #3b82f6);
   font-weight: 500;
 }
 
@@ -115,7 +116,7 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
   left: 20px;
   right: 20px;
   height: 2px;
-  background-color: #3b82f6;
+  background-color: var(--primary-color, #3b82f6);
   border-radius: 2px;
 }
 
@@ -144,8 +145,9 @@ const tabs = ['全部', '文本', '图片/视频', '音频']
   align-items: center;
   justify-content: center;
   height: 300px;
-  color: #9ca3af;
+  color: var(--text-color-placeholder, #9ca3af);
 }
+
 
 .placeholder-text {
   margin-top: 16px;

@@ -1,5 +1,5 @@
 <template>
-  <view class="page login-page">
+  <view class="page login-page" :class="themeStore.currentTheme">
     <!-- 顶部 Logo 区域 -->
     <view class="header-section">
       <image class="logo" src="/static/logo.png" mode="aspectFit" />
@@ -19,7 +19,7 @@
       <!-- 邮箱输入 -->
       <view class="input-group">
         <view class="input-wrapper" :class="{ 'is-focus': emailFocused }">
-          <wd-icon name="mail" size="20px" custom-class="input-icon" :color="emailFocused ? '#0f172a' : '#94a3b8'" />
+          <wd-icon name="mail" size="20px" custom-class="input-icon" custom-style="color: var(--text-color-secondary, #94a3b8)" />
           <input 
             class="real-input"
             v-model="email" 
@@ -34,7 +34,7 @@
       <!-- 密码输入 -->
       <view class="input-group">
         <view class="input-wrapper" :class="{ 'is-focus': passwordFocused }">
-          <wd-icon name="lock-on" size="20px" custom-class="input-icon" :color="passwordFocused ? '#0f172a' : '#94a3b8'" />
+          <wd-icon name="lock-on" size="20px" custom-class="input-icon" custom-style="color: var(--text-color-secondary, #94a3b8)" />
           <input 
             class="real-input"
             v-model="password" 
@@ -50,7 +50,7 @@
       <!-- 辅助选项 -->
       <view class="action-row" v-if="mode === 'login'">
         <view class="remember-me" @click="rememberMe = !rememberMe">
-          <wd-icon :name="rememberMe ? 'check-circle-filled' : 'circle'" size="18px" :color="rememberMe ? '#0f172a' : '#94a3b8'" />
+          <wd-icon :name="rememberMe ? 'check-circle-filled' : 'circle'" size="18px" :custom-style="rememberMe ? 'color: var(--primary-color, #0f172a)' : 'color: var(--text-color-secondary, #94a3b8)'" />
           <text class="remember-text">记住我</text>
         </view>
         <text class="forgot-text">忘记密码？</text>
@@ -83,7 +83,9 @@
 import { ref } from 'vue'
 import { onShow, onLoad } from '@dcloudio/uni-app'
 import { request } from '@/utils/request'
+import { useThemeStore } from '@/store/theme'
 
+const themeStore = useThemeStore()
 const mode = ref<'login' | 'register'>('login')
 const email = ref('')
 const password = ref('')
@@ -160,7 +162,7 @@ onShow(() => {
 /* 页面基础 */
 page {
   height: 100%;
-  background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
+  background: var(--bg-color, #f8fafc);
 }
 
 .login-page {
@@ -189,7 +191,7 @@ page {
 .app-name {
   font-size: 36rpx;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-color-primary, #0f172a);
   letter-spacing: -0.5px;
 }
 
@@ -202,14 +204,14 @@ page {
   display: block;
   font-size: 56rpx;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-color-primary, #0f172a);
   margin-bottom: 16rpx;
   line-height: 1.2;
 }
 
 .subtitle {
   font-size: 30rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
   font-weight: 400;
 }
 
@@ -223,7 +225,7 @@ page {
 }
 
 .input-wrapper {
-  background-color: #f8fafc;
+  background-color: var(--bg-color-card, #f8fafc);
   border-radius: 32rpx;
   height: 112rpx;
   padding: 0 32rpx;
@@ -234,9 +236,9 @@ page {
 }
 
 .input-wrapper.is-focus {
-  background-color: #ffffff;
-  border-color: #0f172a;
-  box-shadow: 0 8rpx 24rpx rgba(15, 23, 42, 0.05);
+  background-color: var(--bg-color-card, #ffffff);
+  border-color: var(--primary-color, #0f172a);
+  box-shadow: 0 8rpx 24rpx rgba(var(--primary-rgb, 15, 23, 42), 0.05);
 }
 
 /* 使用 :deep 穿透组件样式（如果需要）或者直接控制 wd-icon 的外部类 */
@@ -250,11 +252,11 @@ page {
   flex: 1;
   height: 100%;
   font-size: 32rpx;
-  color: #0f172a;
+  color: var(--text-color-primary, #0f172a);
 }
 
 .input-placeholder {
-  color: #94a3b8;
+  color: var(--text-color-placeholder, #94a3b8);
 }
 
 .action-row {
@@ -273,12 +275,12 @@ page {
 
 .remember-text {
   font-size: 28rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
 }
 
 .forgot-text {
   font-size: 28rpx;
-  color: #3b5bdb;
+  color: var(--primary-color, #3b5bdb);
   font-weight: 500;
 }
 
@@ -288,7 +290,7 @@ page {
 }
 
 .custom-button {
-  background: #0f172a;
+  background: var(--primary-color, #0f172a);
   color: #ffffff;
   height: 112rpx;
   border-radius: 32rpx;
@@ -298,7 +300,7 @@ page {
   align-items: center;
   justify-content: center;
   border: none;
-  box-shadow: 0 12rpx 36rpx rgba(15, 23, 42, 0.2);
+  box-shadow: 0 12rpx 36rpx rgba(var(--primary-rgb), 0.2);
   transition: all 0.2s;
 }
 
@@ -319,12 +321,12 @@ page {
 
 .footer-text {
   font-size: 28rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
 }
 
 .link-text {
   font-size: 28rpx;
-  color: #0f172a;
+  color: var(--text-color-primary, #0f172a);
   font-weight: 700;
 }
 </style>

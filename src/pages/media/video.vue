@@ -1,5 +1,14 @@
 <template>
-  <view class="video-page">
+  <view class="video-page" :class="themeStore.currentTheme">
+    <wd-navbar
+      title="视频播放"
+      left-arrow
+      fixed
+      placeholder
+      safe-area-inset-top
+      @click-left="goBack"
+      custom-style="background-color: var(--bg-color, #ffffff); --wot-navbar-title-color: var(--text-color-primary, #333); --wot-navbar-icon-color: var(--text-color-primary, #333);"
+    />
     <video 
       id="myVideo" 
       class="video-player" 
@@ -37,12 +46,18 @@
 import { ref, onUnmounted } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { request, reportHistory } from '@/utils/request'
+import { useThemeStore } from '@/store/theme'
 
+const themeStore = useThemeStore()
 const videoUrl = ref('')
 const coverUrl = ref('')
 const title = ref('')
 const videoId = ref<string | number>('')
 const user = ref<any>(null)
+
+const goBack = () => {
+  uni.navigateBack()
+}
 
 // 进度记录
 let currentProgress = 0
@@ -112,7 +127,7 @@ onUnload(() => {
 
 <style scoped>
 .video-page {
-  background: #ffffff;
+  background: var(--bg-color, #ffffff);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -126,8 +141,8 @@ onUnload(() => {
 
 .info {
   padding: 32rpx;
-  color: #333;
-  background: #ffffff;
+  color: var(--text-color-primary, #333);
+  background: var(--bg-color-card, #ffffff);
   flex: 1;
   border-radius: 24rpx 24rpx 0 0;
   margin-top: -20rpx;
@@ -146,7 +161,7 @@ onUnload(() => {
   height: 80rpx;
   border-radius: 50%;
   margin-right: 20rpx;
-  border: 2rpx solid #eee;
+  border: 2rpx solid var(--border-color, #eee);
 }
 
 .avatar-placeholder {
@@ -154,11 +169,11 @@ onUnload(() => {
   height: 80rpx;
   border-radius: 50%;
   margin-right: 20rpx;
-  background: #3b82f6;
+  background: var(--primary-color, #3b82f6);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #eee;
+  border: 2rpx solid var(--border-color, #eee);
 }
 
 .avatar-text {
@@ -175,12 +190,12 @@ onUnload(() => {
 .author-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #333;
+  color: var(--text-color-primary, #333);
 }
 
 .author-desc {
   font-size: 22rpx;
-  color: #666;
+  color: var(--text-color-secondary, #666);
   margin-top: 4rpx;
 }
 
@@ -189,11 +204,11 @@ onUnload(() => {
   font-weight: 600;
   line-height: 1.4;
   margin-bottom: 16rpx;
-  color: #000;
+  color: var(--text-color-primary, #000);
 }
 
 .time {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-color-secondary, #999);
 }
 </style>

@@ -1,5 +1,14 @@
 <template>
-  <view class="page-container">
+  <view class="page-container" :class="themeStore.currentTheme">
+    <wd-navbar
+      title="最近使用"
+      left-arrow
+      fixed
+      placeholder
+      safe-area-inset-top
+      @click-left="goBack"
+      custom-style="background-color: var(--bg-color, #ffffff); --wot-navbar-title-color: var(--text-color-primary, #1e293b); --wot-navbar-icon-color: var(--text-color-primary, #1e293b);"
+    />
     <view class="list-container">
       <view v-for="item in historyList" :key="item.id + '_' + item.type" class="list-item-wrapper">
         <wd-swipe-action>
@@ -21,7 +30,7 @@
                </view>
              </view>
              <view class="action-btn-arrow">
-               <wd-icon name="arrow-right" size="16px" color="#cbd5e1" />
+               <wd-icon name="arrow-right" size="16px" custom-style="color: var(--text-color-placeholder, #cbd5e1)" />
              </view>
           </view>
           <template #right>
@@ -41,6 +50,7 @@
 import { ref, onMounted } from 'vue'
 import { request, hostBase } from '@/utils/request'
 import { audioStore } from '@/store/audio'
+import { useThemeStore } from '@/store/theme'
 import { onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
 
 // Types (Same as HomeView)
@@ -56,20 +66,26 @@ interface ContentItem {
   isFinished?: boolean
 }
 
+const themeStore = useThemeStore()
 const historyList = ref<ContentItem[]>([])
 const page = ref(0)
 const pageSize = 20
 const hasMore = ref(true)
-const loadMoreState = ref('loading') // loading, finished, error
+type LoadMoreState = 'loading' | 'finished' | 'error'
+const loadMoreState = ref<LoadMoreState>('loading') // loading, finished, error
+
+const goBack = () => {
+  uni.navigateBack()
+}
 
 // Helper functions (Reuse from HomeView)
 const getTypeColor = (type: string) => {
   switch (type) {
-    case 'article': return '#3b82f6';
-    case 'image': return '#10b981';
-    case 'video': return '#8b5cf6';
-    case 'audio': return '#f97316';
-    default: return '#9ca3af';
+    case 'article': return 'var(--primary-color, #3b82f6)';
+    case 'image': return 'var(--success-color, #10b981)';
+    case 'video': return 'var(--purple-color, #8b5cf6)';
+    case 'audio': return 'var(--warning-color, #f97316)';
+    default: return 'var(--text-color-placeholder, #9ca3af)';
   }
 }
 
@@ -207,7 +223,7 @@ onReachBottom(() => {
 <style scoped>
 .page-container {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--bg-color, #f8fafc);
   padding: 24rpx;
 }
 
@@ -220,14 +236,13 @@ onReachBottom(() => {
 .list-item-wrapper {
   border-radius: 24rpx;
   overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02);
   transform: translateZ(0); /* Fix iOS overflow hidden bug */
 }
 
 .list-item {
   display: flex;
   align-items: center;
-  background: #fff;
+  background: var(--bg-color-card, #fff);
   padding: 24rpx;
 }
 
@@ -241,10 +256,10 @@ onReachBottom(() => {
   margin-right: 24rpx;
   flex-shrink: 0;
 }
-.list-icon-box.article { background: #eff6ff; }
-.list-icon-box.video { background: #f5f3ff; }
-.list-icon-box.audio { background: #fff7ed; }
-.list-icon-box.image { background: #ecfdf5; }
+.list-icon-box.article { background: rgba(var(--primary-rgb), 0.1); }
+.list-icon-box.video { background: rgba(var(--purple-rgb), 0.1); }
+.list-icon-box.audio { background: rgba(var(--warning-rgb), 0.1); }
+.list-icon-box.image { background: rgba(var(--success-rgb), 0.1); }
 
 .list-content {
   flex: 1;
@@ -255,7 +270,7 @@ onReachBottom(() => {
 .list-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-color-primary, #1e293b);
   margin-bottom: 8rpx;
   display: block;
   white-space: nowrap;
@@ -267,13 +282,13 @@ onReachBottom(() => {
   display: flex;
   align-items: center;
   font-size: 22rpx;
-  color: #94a3b8;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 .progress-bar-bg {
   width: 100%;
   height: 6rpx;
-  background: #f1f5f9;
+  background: var(--border-color, #f1f5f9);
   border-radius: 3rpx;
   margin-bottom: 8rpx;
   overflow: hidden;
@@ -293,7 +308,7 @@ onReachBottom(() => {
   justify-content: center;
   height: 100%;
   padding: 0 32rpx;
-  background-color: #ef4444;
+  background-color: var(--danger-color, #ef4444);
   color: #ffffff;
   font-size: 28rpx;
 }

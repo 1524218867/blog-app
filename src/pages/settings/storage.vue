@@ -1,12 +1,21 @@
 <template>
-  <view class="page-container">
+  <view class="page-container" :class="themeStore.currentTheme">
+    <wd-navbar
+      title="存储空间"
+      left-arrow
+      fixed
+      placeholder
+      safe-area-inset-top
+      @click-left="goBack"
+      custom-style="background-color: var(--bg-color, #ffffff); --wot-navbar-title-color: var(--text-color-primary, #1e293b); --wot-navbar-icon-color: var(--text-color-primary, #1e293b);"
+    />
     <!-- Cloud Storage Card -->
     <view class="storage-card cloud-card">
       <view class="card-header">
         <text class="card-title">云端存储空间</text>
         <view class="expand-btn" @click="handleExpand">
           <text>扩容</text>
-          <wd-icon name="arrow-right" size="14px" color="#3b82f6" />
+          <wd-icon name="arrow-right" size="14px" custom-style="color: var(--primary-color, #3b82f6)" />
         </view>
       </view>
       
@@ -86,7 +95,7 @@
       <wd-cell-group border>
         <wd-cell title="本地缓存占用" :label="systemInfo" center>
           <template #icon>
-             <wd-icon name="mobile" size="20px" color="#64748b" style="margin-right: 12px;" />
+             <wd-icon name="mobile" size="20px" custom-style="color: var(--text-color-secondary, #64748b); margin-right: 12px;" />
           </template>
           <view class="cell-value">
             <text>{{ formatSize(totalLocalSize) }}</text>
@@ -106,6 +115,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { request } from '@/utils/request'
+import { useThemeStore } from '@/store/theme'
+
+const themeStore = useThemeStore()
+
+const goBack = () => {
+  uni.navigateBack()
+}
 
 const cloudStats = ref({
   total: 0,
@@ -252,12 +268,12 @@ onShow(() => {
 <style scoped>
 .page-container {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--bg-color, #f8fafc);
   padding: 24rpx;
 }
 
 .storage-card {
-  background: #fff;
+  background: var(--bg-color-card, #fff);
   border-radius: 24rpx;
   padding: 32rpx;
   margin-bottom: 24rpx;
@@ -265,8 +281,8 @@ onShow(() => {
 }
 
 .cloud-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
-  border: 1px solid #e0f2fe;
+  background: var(--bg-color-card, #fff);
+  border: 1px solid var(--border-color, #e0f2fe);
 }
 
 .card-header {
@@ -279,14 +295,14 @@ onShow(() => {
 .card-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #1e293b;
+  color: var(--text-color-primary, #1e293b);
 }
 
 .expand-btn {
   display: flex;
   align-items: center;
   font-size: 26rpx;
-  color: #3b82f6;
+  color: var(--primary-color, #3b82f6);
 }
 
 .usage-info {
@@ -299,31 +315,31 @@ onShow(() => {
 .used-num {
   font-size: 48rpx;
   font-weight: bold;
-  color: #0f172a;
+  color: var(--text-color-primary, #0f172a);
 }
 
 .total-num {
   font-size: 28rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
   margin-left: 8rpx;
 }
 
 .usage-percent {
   font-size: 28rpx;
-  color: #3b82f6;
+  color: var(--primary-color, #3b82f6);
   font-weight: 600;
 }
 
 .progress-bar-bg {
   height: 16rpx;
-  background-color: #e2e8f0;
+  background-color: var(--bg-color, #e2e8f0);
   border-radius: 8rpx;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+  background: var(--primary-color, #3b82f6);
   border-radius: 8rpx;
   transition: width 0.5s ease;
 }
@@ -331,14 +347,14 @@ onShow(() => {
 .section-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-color-secondary, #475569);
   margin: 32rpx 0 16rpx 12rpx;
 }
 
 .menu-list {
   border-radius: 24rpx;
   overflow: hidden;
-  background: #fff;
+  background: var(--bg-color-card, #fff);
   margin-bottom: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.03);
 }
@@ -353,15 +369,29 @@ onShow(() => {
   margin-right: 24rpx;
 }
 
-.image-icon { background-color: #f59e0b; }
-.video-icon { background-color: #3b82f6; }
-.audio-icon { background-color: #10b981; }
-.doc-icon { background-color: #8b5cf6; }
-.other-icon { background-color: #94a3b8; }
+.image-icon {
+  background-color: var(--warning-color, #f59e0b);
+}
+
+.video-icon {
+  background-color: var(--primary-color, #3b82f6);
+}
+
+.audio-icon {
+  background-color: var(--success-color, #10b981);
+}
+
+.doc-icon {
+  background-color: var(--purple-color, #8b5cf6);
+}
+
+.other-icon {
+  background-color: var(--text-color-disabled, #94a3b8);
+}
 
 .cell-value {
   font-size: 28rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
 }
 
 .action-area {
@@ -373,7 +403,7 @@ onShow(() => {
   display: block;
   text-align: center;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: var(--text-color-placeholder, #94a3b8);
   margin-top: 24rpx;
 }
 </style>

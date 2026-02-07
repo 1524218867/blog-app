@@ -1,5 +1,13 @@
 <template>
-  <view class="page">
+  <view class="page" :class="themeStore.currentTheme">
+    <wd-navbar
+      title="文章详情"
+      left-arrow
+      fixed
+      placeholder
+      safe-area-inset-top
+      @click-left="goBack"
+    />
     <view v-if="loading" class="loading">加载中...</view>
     <view v-else-if="article" class="article-container">
       <view class="header">
@@ -40,9 +48,15 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { request, apiBase, hostBase, reportHistory } from '@/utils/request'
+import { useThemeStore } from '@/store/theme'
 
+const themeStore = useThemeStore()
 const article = ref<any>(null)
 const loading = ref(true)
+
+const goBack = () => {
+  uni.navigateBack()
+}
 
 onLoad((options) => {
   if (options && options.id) {
@@ -93,16 +107,56 @@ const processedContent = computed(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+:deep(.wd-navbar) {
+  background-color: var(--bg-color) !important;
+  --wot-navbar-bg: var(--bg-color);
+  --wot-navbar-title-color: var(--text-color-primary);
+  --wot-navbar-icon-color: var(--text-color-primary);
+  --wot-navbar-side-color: var(--text-color-primary);
+}
+
+:deep(.wd-navbar__content) {
+  background-color: var(--bg-color) !important;
+}
+
+:deep(.wd-navbar__title) {
+  color: var(--text-color-primary) !important;
+}
+
+:deep(.wd-navbar__left) {
+  color: var(--text-color-primary) !important;
+}
+
+:deep(.wd-navbar__right) {
+  color: var(--text-color-primary) !important;
+}
+
+:deep(.wd-navbar__icon) {
+  color: var(--text-color-primary) !important;
+}
+
+:deep(.wd-icon) {
+  color: var(--text-color-primary) !important;
+}
+
+:deep(.wd-navbar__text) {
+  color: var(--text-color-primary) !important;
+}
+
+:deep(.wd-navbar::after) {
+  background-color: var(--border-color) !important;
+}
+
 .page {
   padding: 32rpx;
-  background: #ffffff;
+  background: var(--bg-color, #ffffff);
   min-height: 100vh;
 }
 .loading, .error {
   text-align: center;
   padding: 40rpx;
-  color: #999;
+  color: var(--text-color-secondary, #999);
 }
 .header {
   margin-bottom: 32rpx;
@@ -110,7 +164,7 @@ const processedContent = computed(() => {
 .title {
   font-size: 40rpx;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text-color-primary, #1a1a1a);
   margin-bottom: 16rpx;
   line-height: 1.4;
 }
@@ -118,12 +172,12 @@ const processedContent = computed(() => {
   display: flex;
   align-items: center;
   font-size: 24rpx;
-  color: #94a3b8;
+  color: var(--text-color-secondary, #94a3b8);
   gap: 16rpx;
 }
 .tag {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: rgba(var(--primary-rgb, 79, 70, 229), 0.1);
+  color: var(--primary-color, #4f46e5);
   padding: 2rpx 10rpx;
   border-radius: 6rpx;
 }
@@ -135,7 +189,7 @@ const processedContent = computed(() => {
 }
 .content {
   font-size: 30rpx;
-  color: #334155;
+  color: var(--text-color-primary, #334155);
   line-height: 1.8;
 }
 

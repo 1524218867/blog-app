@@ -1,9 +1,9 @@
 <template>
-  <view class="editor-container" :style="{ paddingTop: statusBarHeight + 'px' }">
+  <view class="editor-container" :class="themeStore.currentTheme" :style="{ paddingTop: statusBarHeight + 'px' }">
     <!-- Navbar -->
     <view class="navbar">
       <view class="nav-left" @click="goBack">
-        <wd-icon name="arrow-left" size="24px" color="#333"></wd-icon>
+        <wd-icon name="arrow-left" size="24px" custom-style="color: var(--text-color-primary, #333)"></wd-icon>
       </view>
       <view class="nav-title">{{ id ? '编辑文章' : '新建文章' }}</view>
       <view class="nav-right" @click="handleSave">
@@ -18,7 +18,7 @@
         v-model="title" 
         placeholder="标题" 
         placeholder-class="placeholder"
-        :style="{ backgroundColor: bgColor }"
+        :style="{ backgroundColor: bgColor, color: 'var(--text-color-primary, #333)' }"
       />
       <view class="divider"></view>
       <editor 
@@ -39,7 +39,7 @@
       <scroll-view scroll-x class="toolbar-scroll" :show-scrollbar="false">
         <view class="toolbar-items">
           <view class="toolbar-item" @click="format('header', 'H2')">
-            <wd-icon name="text" size="20px" color="#666"></wd-icon>
+            <wd-icon name="text" size="20px" custom-style="color: var(--text-color-secondary, #666)"></wd-icon>
           </view>
           <view class="toolbar-item" @click="format('bold')">
             <text class="icon-text" :class="{ active: formats.bold }">B</text>
@@ -48,20 +48,20 @@
             <text class="icon-text" :class="{ active: formats.italic }" style="font-style: italic;">I</text>
           </view>
           <view class="toolbar-item" @click="format('list', 'ordered')">
-            <wd-icon name="list" size="20px" color="#666"></wd-icon>
+            <wd-icon name="list" size="20px" custom-style="color: var(--text-color-secondary, #666)"></wd-icon>
           </view>
           <view class="toolbar-item" @click="insertImage">
-            <wd-icon name="image" size="20px" color="#666"></wd-icon>
+            <wd-icon name="image" size="20px" custom-style="color: var(--text-color-secondary, #666)"></wd-icon>
           </view>
           <view class="toolbar-item" @click="showColorPanel = !showColorPanel">
-            <wd-icon name="fill" size="20px" color="#666"></wd-icon>
+            <wd-icon name="fill" size="20px" custom-style="color: var(--text-color-secondary, #666)"></wd-icon>
           </view>
         </view>
       </scroll-view>
     </view>
 
     <!-- Color Panel -->
-    <wd-popup v-model="showColorPanel" position="bottom" custom-style="padding: 20px;">
+    <wd-popup v-model="showColorPanel" position="bottom" custom-style="padding: 20px; background-color: var(--bg-color-card, #fff);">
       <view class="panel-title">背景颜色</view>
       <view class="color-options">
         <view 
@@ -72,7 +72,7 @@
           :style="{ backgroundColor: color.value }"
           @click="bgColor = color.value"
         >
-          <wd-icon v-if="bgColor === color.value" name="check" color="#666" size="20px"></wd-icon>
+          <wd-icon v-if="bgColor === color.value" name="check" custom-style="color: var(--text-color-secondary, #666)" size="20px"></wd-icon>
         </view>
       </view>
     </wd-popup>
@@ -83,7 +83,9 @@
 import { ref, reactive } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { request, apiBase } from '@/utils/request'
+import { useThemeStore } from '@/store/theme'
 
+const themeStore = useThemeStore()
 const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 20
 const safeAreaBottom = uni.getSystemInfoSync().safeAreaInsets?.bottom || 0
 
@@ -94,16 +96,16 @@ const loading = ref(false)
 
 // Style Settings
 const showColorPanel = ref(false)
-const bgColor = ref('#ffffff')
+const bgColor = ref('var(--bg-color-card, #ffffff)')
 const formats = reactive<any>({})
 let editorCtx: any = null
 
 const bgColors = [
-  { label: '默认', value: '#ffffff' },
-  { label: '米黄', value: '#fff8ea' },
-  { label: '浅绿', value: '#f0f9eb' },
-  { label: '浅蓝', value: '#f0faff' },
-  { label: '护眼', value: '#f5f5f5' }
+  { label: '默认', value: 'var(--bg-color-card, #ffffff)' },
+  { label: '米黄', value: 'rgba(var(--warning-rgb), 0.08)' },
+  { label: '浅绿', value: 'rgba(var(--success-rgb), 0.08)' },
+  { label: '浅蓝', value: 'rgba(var(--primary-rgb), 0.08)' },
+  { label: '护眼', value: 'var(--bg-color, #f5f5f5)' }
 ]
 
 onLoad((options: any) => {
@@ -251,10 +253,11 @@ const handleSave = async () => {
 
 <style scoped>
 .editor-container {
-  min-height: 100vh;
-  background-color: #fff; /* Xiaomi Note default white/yellowish, let's stick to clean white */
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-color, #ffffff);
+  box-sizing: border-box;
 }
 
 .navbar {
@@ -263,173 +266,115 @@ const handleSave = async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background-color: #fff;
-  z-index: 100;
+  background-color: var(--bg-color-card, #ffffff);
+  border-bottom: 1px solid var(--border-color, #eee);
+  flex-shrink: 0;
 }
 
 .nav-title {
-  font-size: 17px;
-  font-weight: 500;
-  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color-primary, #333);
 }
 
 .save-btn {
-  color: #F0B90B; /* Xiaomi yellow-ish or primary color */
-  font-size: 16px;
+  padding: 6px 16px;
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 14px;
   font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 4px;
 }
 
 .save-btn.disabled {
-  color: #ccc;
+  background: var(--text-color-placeholder, #ccc);
+  opacity: 0.5;
 }
 
 .editor-content {
   flex: 1;
-  padding: 20px 24px;
-  padding-bottom: 80px; /* Add padding for bottom toolbar */
-  display: flex;
-  flex-direction: column;
-  transition: background-color 0.3s;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: var(--bg-color, #fff);
 }
 
 .title-input {
   font-size: 24px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+  font-weight: bold;
   height: 40px;
-  line-height: 40px;
-  transition: background-color 0.3s;
+  margin-bottom: 20px;
+  width: 100%;
+  color: var(--text-color-primary, #333);
 }
 
 .divider {
   height: 1px;
-  background-color: #f0f0f0;
-  margin-bottom: 16px;
+  background-color: var(--border-color, #eee);
+  margin-bottom: 20px;
 }
 
 .content-editor {
-  flex: 1;
   width: 100%;
+  height: calc(100% - 70px);
+  font-size: 16px;
   line-height: 1.6;
-  color: #333;
-  min-height: 300px;
-  font-size: 17px;
-  transition: all 0.3s;
+  color: var(--text-color-primary, #333);
 }
 
-.placeholder {
-  color: #999;
-}
-
-/* Toolbar Styles */
 .toolbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  border-top: 1px solid #eee;
-  z-index: 100;
-  transition: background-color 0.3s;
-}
-
-.toolbar-scroll {
-  width: 100%;
-  height: 100%;
+  border-top: 1px solid var(--border-color, #eee);
+  background: var(--bg-color-card, #fff);
+  padding-top: 10px;
 }
 
 .toolbar-items {
   display: flex;
-  align-items: center;
-  height: 100%;
   padding: 0 10px;
 }
 
 .toolbar-item {
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 15px;
-  height: 100%;
-  flex-shrink: 0;
+  margin-right: 10px;
 }
 
 .icon-text {
   font-size: 18px;
   font-weight: bold;
-  color: #666;
+  color: var(--text-color-secondary, #666);
 }
 
 .icon-text.active {
-  color: #3b82f6;
+  color: var(--primary-color, #3b82f6);
 }
 
-.toolbar-text {
-  font-size: 10px;
-  color: #666;
-  margin-top: 2px;
-}
-
-/* Panel Styles */
 .panel-title {
   font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.font-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding: 0 20px;
-}
-
-.font-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  opacity: 0.5;
-  transition: all 0.3s;
-}
-
-.font-option.active {
-  opacity: 1;
-  color: #333;
-  font-weight: 600;
-}
-
-.font-label {
-  font-size: 12px;
-  color: #666;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: var(--text-color-primary, #333);
 }
 
 .color-options {
   display: flex;
-  justify-content: space-between;
-  padding: 0 10px;
+  gap: 16px;
 }
 
 .color-option {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  border: 1px solid #eee;
+  border-radius: 20px;
+  border: 1px solid var(--border-color, #eee);
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .color-option.active {
-  border-color: #333;
-  transform: scale(1.1);
+  border-color: var(--primary-color, #3b82f6);
+  border-width: 2px;
 }
 </style>

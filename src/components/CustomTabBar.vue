@@ -1,5 +1,5 @@
 <template>
-  <view class="tab-bar-wrapper">
+  <view class="tab-bar-wrapper" :class="themeStore.currentTheme">
     <view class="tab-bar">
       <view 
         v-for="(item, index) in tabs" 
@@ -20,7 +20,6 @@
             v-else
             :name="item.icon" 
             size="24px"
-            :color="currentTab === index ? '#3b82f6' : '#9ca3af'"
             custom-style="display: block; transition: all 0.3s ease;"
             :custom-class="currentTab === index ? 'active-icon' : ''"
           />
@@ -36,6 +35,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useThemeStore } from '@/store/theme'
 
 const props = defineProps<{
   current?: number
@@ -44,6 +44,7 @@ const props = defineProps<{
 const emit = defineEmits(['change'])
 
 const currentTab = ref(props.current || 0)
+const themeStore = useThemeStore()
 
 const switchTab = (index: number) => {
   currentTab.value = index
@@ -86,7 +87,7 @@ const tabs: TabItem[] = [
   right: 0;
   display: flex;
   justify-content: center;
-  z-index: 100;
+  z-index: 110; /* Increased to be above MiniPlayer (z-index: 102) but below extreme popups */
   pointer-events: none; /* Let clicks pass through the wrapper */
 }
 
@@ -95,9 +96,9 @@ const tabs: TabItem[] = [
   display: flex;
   gap: 8px;
   padding: 12px 8px;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(var(--bg-color-card-rgb, 255, 255, 255), 0.8);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  border: 1px solid rgba(var(--text-color-placeholder-rgb, 229, 231, 235), 0.2);
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
@@ -120,13 +121,13 @@ const tabs: TabItem[] = [
   justify-content: center;
   border-radius: 8px;
   transition: all 0.3s ease;
-  color: #4b5563; /* text-gray-600 */
+  color: var(--text-color-secondary, #64748b);
 }
 
 .tab-item:hover .icon-box,
 .tab-item.active .icon-box {
-  background-color: #eff6ff; /* bg-blue-50 */
-  color: #2563eb; /* text-blue-600 */
+  background-color: rgba(var(--primary-rgb, 59, 130, 246), 0.1);
+  color: var(--primary-color, #3b82f6);
 }
 
 :deep(.active-icon) {
@@ -140,8 +141,8 @@ const tabs: TabItem[] = [
   transform: translateX(-50%) scale(0);
   transform-origin: bottom;
   padding: 6px 12px;
-  background-color: white;
-  border: 1px solid #e5e7eb;
+  background-color: var(--bg-color-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
@@ -149,6 +150,7 @@ const tabs: TabItem[] = [
   transition: all 0.3s ease-in-out;
   opacity: 0;
   white-space: nowrap;
+  color: var(--text-color-primary, #1e293b);
 }
 
 /* Triangle for tooltip */
@@ -160,7 +162,7 @@ const tabs: TabItem[] = [
   transform: translateX(-50%);
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid white;
+  border-top: 6px solid var(--bg-color-card, #ffffff);
 }
 
 .tab-item:hover .tab-label {

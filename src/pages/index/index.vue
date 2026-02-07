@@ -1,5 +1,5 @@
 <template>
-  <view class="page" v-if="isReady">
+  <view class="page" :class="currentTheme" v-if="isReady">
     <HomeView 
       v-show="currentTab === 0"
       :user="user" 
@@ -21,18 +21,21 @@
 
     <MiniPlayer />
     <FullPlayer />
+    <DesktopLyric />
     <CustomTabBar :current="currentTab" @change="handleTabChange" />
     <UpdatePopup />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow, onLoad } from '@dcloudio/uni-app'
 import { request } from '@/utils/request'
+import { useThemeStore } from '@/store/theme'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import FullPlayer from '@/components/FullPlayer.vue'
+import DesktopLyric from '@/components/DesktopLyric.vue'
 import UpdatePopup from '@/components/UpdatePopup.vue'
 import HomeView from '@/components/views/HomeView.vue'
 import LibraryView from '@/components/views/LibraryView.vue'
@@ -40,6 +43,9 @@ import ProfileView from '@/components/views/ProfileView.vue'
 
 const currentTab = ref(0)
 const isReady = ref(false)
+const themeStore = useThemeStore()
+
+const currentTheme = computed(() => themeStore.currentTheme)
 
 const handleTabChange = (index: number) => {
   currentTab.value = index
@@ -107,8 +113,23 @@ onShow(() => {
 .page {
   min-height: 100%;
   padding: 0;
-  background: #f5f6f8;
+  background: var(--bg-color, #f5f6f8);
+  color: var(--text-color-primary, #1e293b);
   box-sizing: border-box;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Theme Classes - Mapping variables locally if not inherited from root */
+.page.dark {
+  /* Inherit from global styles */
+}
+
+.page.warm {
+  /* Inherit from global styles */
+}
+
+.page.light {
+  /* Inherit from global styles */
 }
 
 .fade-enter-active,

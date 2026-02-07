@@ -10,7 +10,7 @@ interface Song {
   lyrics?: string
 }
 
-const audioContext = uni.createInnerAudioContext()
+const audioContext = (uni.getBackgroundAudioManager ? uni.getBackgroundAudioManager() : uni.createInnerAudioContext()) as any
 const retryMap: Record<number, number> = {}
 let playbackCheckInterval: number | null = null
 let stalledCount = 0
@@ -121,7 +121,8 @@ const state = reactive({
   // Timer related
   timerDuration: 0, // minutes
   timerRemaining: 0, // seconds
-  timerId: null as number | null
+  timerId: null as number | null,
+  showDesktopLyric: false
 })
 
 // Timer Interval
@@ -192,6 +193,14 @@ const play = (song: Song) => {
   stopPlaybackCheck()
 
   state.currentSong = song
+
+  // Set background audio metadata for lock screen controls
+  audioContext.title = song.name || '未知歌曲'
+  audioContext.singer = song.artist || '未知艺术家'
+  audioContext.epname = '存界音乐'
+  audioContext.coverImgUrl = song.coverUrl || 'https://lpz.chatc.vip/uploads/20240417/1c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c.png' // Fallback or use a valid default URL
+  
+  // Setting src automatically starts playback on some platforms
   audioContext.src = song.url
   
   // Optimistically set playing state and start check IMMEDIATELY
@@ -427,7 +436,7 @@ audioContext.onPlay(() => {
     stopPlaybackCheck()
     playNext(true)
   })
-  audioContext.onError((res) => {
+  audioContext.onError((res: any) => {
     console.error('Audio error:', res)
     state.isPlaying = false
     stopPlaybackCheck()
@@ -447,6 +456,18 @@ audioContext.onPlay(() => {
   audioContext.onCanplay(() => {
     state.duration = audioContext.duration
   })
+  
+  // Background Audio Controls (Lock Screen)
+  if (audioContext.onPrev) {
+    audioContext.onPrev(() => {
+      playPrev()
+    })
+  }
+  if (audioContext.onNext) {
+    audioContext.onNext(() => {
+      playNext()
+    })
+  }
 
 // Export a proxy-like object to maintain compatibility with existing usage
 export const audioStore = reactive({
@@ -482,6 +503,9 @@ export const audioStore = reactive({
 
   get timerDuration() { return state.timerDuration },
   get timerRemaining() { return state.timerRemaining },
+
+  get showDesktopLyric() { return state.showDesktopLyric },
+  set showDesktopLyric(v) { state.showDesktopLyric = v },
 
   setPlayList,
   play,

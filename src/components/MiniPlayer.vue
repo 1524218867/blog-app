@@ -38,17 +38,17 @@
       
       <view class="controls">
         <view class="btn" @click.stop="audioStore.playPrev()">
-          <wd-icon name="previous" size="24px" color="#333" />
+          <wd-icon name="previous" size="24px" custom-style="color: var(--text-color-primary, #333)" />
         </view>
         <view class="btn" @click.stop="audioStore.togglePlay()">
           <wd-icon 
             :name="audioStore.isPlaying ? 'pause' : 'play'" 
             size="45px" 
-            color="#333" 
+            custom-style="color: var(--text-color-primary, #333)" 
           />
         </view>
         <view class="btn" @click.stop="audioStore.playNext()">
-          <wd-icon name="next" size="24px" color="#333" />
+          <wd-icon name="next" size="24px" custom-style="color: var(--text-color-primary, #333)" />
         </view>
       </view>
     </view>
@@ -173,13 +173,13 @@ const goPlayer = () => {
   transform: translateX(-50%); /* Center horizontally */
   width: 560rpx; /* Approximate width to match CustomTabBar */
   height: 110rpx;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(var(--bg-color-card-rgb, 255, 255, 255), 0.9);
   backdrop-filter: blur(10px);
   border-radius: 55rpx;
   box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.1);
   z-index: 102; /* Ensure above Gradient (101) and TabBar (100) */
   overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid var(--border-color, rgba(0,0,0,0.05));
 }
 
 .progress-track {
@@ -188,12 +188,12 @@ const goPlayer = () => {
   left: 0;
   right: 0;
   height: 4rpx;
-  background: rgba(0,0,0,0.05);
+  background: rgba(var(--text-color-primary-rgb, 0, 0, 0), 0.05);
 }
 
 .progress-fill {
   height: 100%;
-  background: #4f46e5;
+  background: var(--primary-color, #4f46e5);
   transition: width 0.2s linear;
 }
 
@@ -210,8 +210,8 @@ const goPlayer = () => {
   border-radius: 50%;
   overflow: hidden;
   margin-right: 20rpx;
-  background: #eee;
-  border: 2rpx solid rgba(0,0,0,0.1);
+  background: var(--bg-color, #f1f5f9);
+  border: 2rpx solid var(--border-color, rgba(0,0,0,0.1));
   animation: rotate 10s linear infinite;
   animation-play-state: paused;
   will-change: transform;
@@ -237,7 +237,7 @@ const goPlayer = () => {
 .name {
   font-size: 28rpx;
   font-weight: 500;
-  color: #333;
+  color: var(--text-color-primary, #333);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -245,7 +245,7 @@ const goPlayer = () => {
 
 .artist {
   font-size: 22rpx;
-  color: #888;
+  color: var(--text-color-secondary, #888);
 }
 
 .artist-row {
@@ -258,14 +258,14 @@ const goPlayer = () => {
   display: flex;
   align-items: center;
   gap: 4rpx;
-  background: rgba(76, 217, 100, 0.1);
+  background: rgba(var(--success-rgb), 0.1);
   padding: 2rpx 8rpx;
   border-radius: 8rpx;
 }
 
 .timer-text {
   font-size: 20rpx;
-  color: #4CD964;
+  color: var(--success-color, #4CD964);
 }
 
 .controls {
@@ -287,6 +287,6 @@ const goPlayer = () => {
 
 .icon {
   font-size: 36rpx;
-  color: #333;
+  color: var(--text-color-primary, #333);
 }
 </style>

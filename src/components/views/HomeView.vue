@@ -9,6 +9,9 @@
         @search="handleSearch"
         @clear="handleClear"
         hide-cancel
+        placeholder-left
+        custom-style="background-color: transparent;"
+        custom-class="theme-search"
       />
     </view>
 
@@ -18,7 +21,7 @@
       <!-- 5. 置顶内容 (Pinned) - Optional -->
       <view v-if="pinnedList.length > 0" class="section">
         <view class="section-header">
-          <text class="section-title-text">📌 置顶内容</text>
+          <text class="section-title-text">置顶内容</text>
         </view>
         <view class="pinned-list">
           <view 
@@ -45,10 +48,10 @@
       <!-- 2. 最近使用 (Recently Used) -->
       <view class="section" v-if="recentlyUsed.length > 0">
         <view class="section-header">
-          <text class="section-title-text">⏱ 最近使用</text>
+          <text class="section-title-text">最近使用</text>
           <view class="more-link" @click="viewMore('history')">
             <text>更多</text>
-            <wd-icon name="arrow-right" size="14px" color="#94a3b8"></wd-icon>
+            <wd-icon name="arrow-right" size="14px" custom-style="color: var(--text-color-secondary, #94a3b8)"></wd-icon>
           </view>
         </view>
         <scroll-view scroll-x class="horizontal-scroll" :show-scrollbar="false">
@@ -63,10 +66,10 @@
               <view class="card-cover-box">
                 <image v-if="item.cover" :src="item.cover" mode="aspectFill" class="card-cover" />
                 <view v-else class="card-cover-placeholder" :class="item.type">
-                  <wd-icon v-if="item.type === 'article'" name="list" size="32px" color="#3b82f6" />
-                  <wd-icon v-else-if="item.type === 'video'" name="video" size="32px" color="#8b5cf6" />
-                  <wd-icon v-else-if="item.type === 'audio'" name="sound" size="32px" color="#f97316" />
-                  <wd-icon v-else name="image" size="32px" color="#10b981" />
+                  <wd-icon v-if="item.type === 'article'" name="list" size="32px" custom-style="color: var(--primary-color, #3b82f6)" />
+                  <wd-icon v-else-if="item.type === 'video'" name="video" size="32px" custom-style="color: var(--purple-color, #8b5cf6)" />
+                  <wd-icon v-else-if="item.type === 'audio'" name="sound" size="32px" custom-style="color: var(--warning-color, #f97316)" />
+                  <wd-icon v-else name="image" size="32px" custom-style="color: var(--success-color, #10b981)" />
                 </view>
                 <view class="type-badge" :class="item.type">
                   <wd-icon v-if="item.type === 'article'" name="list" size="12px" color="#fff" />
@@ -85,7 +88,7 @@
       <!-- 4. 未完成 (Unfinished) -->
       <view class="section" v-if="unfinishedList.length > 0">
         <view class="section-header">
-          <text class="section-title-text">⏯ 未完成</text>
+          <text class="section-title-text">继续使用</text>
         </view>
         <view class="list-container">
           <view v-for="item in unfinishedList" :key="item.id" class="list-item-wrapper">
@@ -121,7 +124,7 @@
       <!-- 3. 最近添加 (Recently Added) -->
       <view class="section" v-if="recentlyAdded.length > 0">
         <view class="section-header">
-          <text class="section-title-text">📥 最近添加</text>
+          <text class="section-title-text">最近添加</text>
         </view>
         <scroll-view scroll-y class="recent-added-scroll" :show-scrollbar="true">
           <view class="list-container">
@@ -138,7 +141,7 @@
 
       <!-- Global Empty State -->
       <view v-if="!pinnedList.length && !recentlyUsed.length && !unfinishedList.length && !recentlyAdded.length" class="empty-state">
-        <wd-icon name="box" size="64px" color="#cbd5e1"></wd-icon>
+        <wd-icon name="box" size="64px" custom-style="color: var(--text-color-placeholder, #cbd5e1)"></wd-icon>
         <text class="empty-text">暂无内容，快去库里添加吧</text>
       </view>
 
@@ -149,7 +152,7 @@
     <wd-popup 
       v-model="showActionSheet" 
       position="center" 
-      custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx;"
+      custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx; background: var(--bg-color-card, #fff);"
       :z-index="10000"
     >
       <view class="popup-menu">
@@ -158,7 +161,7 @@
           v-for="(action, index) in actionSheetActions" 
           :key="index" 
           class="popup-item" 
-          :style="{ color: action.color || '#333' }"
+          :style="{ color: action.color || 'var(--text-color-primary, #333)' }"
           @click="handleActionSelect({ item: action })"
         >
           {{ action.name }}
@@ -208,11 +211,11 @@ const recentlyAdded = ref<ContentItem[]>([])
 // --- Helpers ---
 const getTypeColor = (type: string) => {
   switch (type) {
-    case 'article': return '#3b82f6';
-    case 'image': return '#10b981';
-    case 'video': return '#8b5cf6';
-    case 'audio': return '#f97316';
-    default: return '#9ca3af';
+    case 'article': return 'var(--primary-color, #3b82f6)';
+    case 'image': return 'var(--success-color, #10b981)';
+    case 'video': return 'var(--purple-color, #8b5cf6)';
+    case 'audio': return 'var(--warning-color, #f97316)';
+    default: return 'var(--text-color-placeholder, #9ca3af)';
   }
 }
 
@@ -349,13 +352,13 @@ const handleRefresh = async () => {
 
 const handlePinnedLongPress = (item: ContentItem) => {
   currentActionItem.value = item
-  actionSheetActions.value = [{ name: '取消置顶', color: '#fa4350' }]
+  actionSheetActions.value = [{ name: '取消置顶', color: 'var(--danger-color, #fa4350)' }]
   showActionSheet.value = true
 }
 
 const handleHistoryLongPress = (item: ContentItem) => {
   currentActionItem.value = item
-  actionSheetActions.value = [{ name: '删除记录', color: '#fa4350' }]
+  actionSheetActions.value = [{ name: '删除记录', color: 'var(--danger-color, #fa4350)' }]
   showActionSheet.value = true
 }
 
@@ -421,9 +424,36 @@ defineExpose({
   box-sizing: border-box;
 }
 
-/* Search */
+/* Theme Search Overrides */
+.theme-search {
+  --wot-search-side-padding: 0;
+  --wot-search-bg: transparent;
+  --wot-search-input-bg: var(--bg-color-card, #ffffff);
+  --wot-search-input-color: var(--text-color-primary, #1e293b);
+  --wot-search-search-icon-color: var(--text-color-placeholder, #94a3b8);
+  --wot-search-placeholder-color: var(--text-color-placeholder, #94a3b8);
+  --wot-search-cancel-color: var(--primary-color, #3b82f6);
+}
+
+/* Hide search icons as requested */
+:deep(.wd-search__search-icon),
+:deep(.wd-search__search-left-icon) {
+  display: none !important;
+}
+
+:deep(.wd-search__block) {
+  border-radius: 36rpx !important;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+:deep(.wd-search__cover) {
+  border-radius: 36rpx !important;
+}
+
 .search-section {
-  padding: 0 0 24rpx; /* Removed top padding */
+  padding: 0 24rpx;
+  margin-bottom: 24rpx;
 }
 
 /* Sections */
@@ -440,14 +470,14 @@ defineExpose({
 .section-title-text {
   font-size: 34rpx;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-color-primary, #1e293b);
 }
 .more-link {
   display: flex;
   align-items: center;
   gap: 4rpx;
   font-size: 26rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
 }
 
 /* Pinned List */
@@ -457,14 +487,14 @@ defineExpose({
   gap: 20rpx;
 }
 .pinned-card {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--primary-color, #3b82f6) 0%, rgba(var(--primary-rgb, 37, 99, 235), 0.8) 100%);
   border-radius: 24rpx;
   padding: 24rpx;
   width: calc(50% - 10rpx);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8rpx 16rpx rgba(59, 130, 246, 0.2);
+  box-shadow: 0 8rpx 16rpx rgba(var(--primary-rgb, 59, 130, 246), 0.2);
 }
 .pinned-icon {
   width: 64rpx;
@@ -522,10 +552,10 @@ defineExpose({
   align-items: center;
   justify-content: center;
 }
-.card-cover-placeholder.article { background: #eff6ff; }
-.card-cover-placeholder.video { background: #f5f3ff; }
-.card-cover-placeholder.audio { background: #fff7ed; }
-.card-cover-placeholder.image { background: #ecfdf5; }
+.card-cover-placeholder.article { background: rgba(var(--primary-rgb, 59, 130, 246), 0.1); }
+.card-cover-placeholder.video { background: rgba(var(--purple-rgb, 139, 92, 246), 0.1); }
+.card-cover-placeholder.audio { background: rgba(var(--warning-rgb, 249, 115, 22), 0.1); }
+.card-cover-placeholder.image { background: rgba(var(--success-rgb, 16, 185, 129), 0.1); }
 
 .type-badge {
   position: absolute;
@@ -539,14 +569,14 @@ defineExpose({
   justify-content: center;
   backdrop-filter: blur(4px);
 }
-.type-badge.article { background: rgba(59, 130, 246, 0.9); }
-.type-badge.video { background: rgba(139, 92, 246, 0.9); }
-.type-badge.audio { background: rgba(249, 115, 22, 0.9); }
-.type-badge.image { background: rgba(16, 185, 129, 0.9); }
+.type-badge.article { background: rgba(var(--primary-rgb, 59, 130, 246), 0.9); }
+.type-badge.video { background: rgba(var(--purple-rgb, 139, 92, 246), 0.9); }
+.type-badge.audio { background: rgba(var(--warning-rgb, 249, 115, 22), 0.9); }
+.type-badge.image { background: rgba(var(--success-rgb, 16, 185, 129), 0.9); }
 
 .card-title {
   font-size: 28rpx;
-  color: #1e293b;
+  color: var(--text-color-primary, #1e293b);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -555,7 +585,7 @@ defineExpose({
 }
 .card-time {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 /* Unfinished List */
@@ -573,7 +603,7 @@ defineExpose({
 .list-item {
   display: flex;
   align-items: center;
-  background: #fff;
+  background: var(--bg-color-card, #fff);
   padding: 20rpx;
 }
 .list-icon-box {
@@ -585,10 +615,10 @@ defineExpose({
   justify-content: center;
   margin-right: 24rpx;
 }
-.list-icon-box.article { background: #eff6ff; }
-.list-icon-box.video { background: #f5f3ff; }
-.list-icon-box.audio { background: #fff7ed; }
-.list-icon-box.image { background: #ecfdf5; }
+.list-icon-box.article { background: rgba(var(--primary-rgb, 59, 130, 246), 0.1); }
+.list-icon-box.video { background: rgba(var(--purple-rgb, 139, 92, 246), 0.1); }
+.list-icon-box.audio { background: rgba(var(--warning-rgb, 249, 115, 22), 0.1); }
+.list-icon-box.image { background: rgba(var(--success-rgb, 16, 185, 129), 0.1); }
 
 .list-content {
   flex: 1;
@@ -597,14 +627,14 @@ defineExpose({
 .list-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-color-primary, #1e293b);
   margin-bottom: 12rpx;
   display: block;
 }
 .progress-bar-bg {
   width: 100%;
   height: 8rpx;
-  background: #f1f5f9;
+  background: var(--border-color, #f1f5f9);
   border-radius: 4rpx;
   margin-bottom: 8rpx;
   overflow: hidden;
@@ -615,7 +645,7 @@ defineExpose({
 }
 .list-subtitle {
   font-size: 22rpx;
-  color: #64748b;
+  color: var(--text-color-secondary, #64748b);
 }
 .play-btn {
   opacity: 0.8;
@@ -632,7 +662,7 @@ defineExpose({
 }
 .empty-text {
   font-size: 28rpx;
-  color: #94a3b8;
+  color: var(--text-color-placeholder, #94a3b8);
   margin-top: 24rpx;
 }
 .simple-list-item {
@@ -640,7 +670,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 24rpx;
-  background: #f8fafc;
+  background: var(--bg-color-card, #f8fafc);
   border-radius: 16rpx;
 }
 .simple-info {
@@ -650,24 +680,24 @@ defineExpose({
 }
 .simple-title {
   font-size: 28rpx;
-  color: #334155;
+  color: var(--text-color-primary, #334155);
   font-weight: 500;
 }
 .simple-meta {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: var(--text-color-secondary, #94a3b8);
 }
 .simple-tag {
   font-size: 20rpx;
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
-  background: #e2e8f0;
-  color: #64748b;
+  background: var(--border-color, #e2e8f0);
+  color: var(--text-color-secondary, #64748b);
 }
-.simple-tag.article { background: #eff6ff; color: #3b82f6; }
-.simple-tag.image { background: #ecfdf5; color: #10b981; }
-.simple-tag.video { background: #f5f3ff; color: #8b5cf6; }
-.simple-tag.audio { background: #fff7ed; color: #f97316; }
+.simple-tag.article { background: rgba(var(--primary-rgb, 59, 130, 246), 0.1); color: var(--primary-color, #3b82f6); }
+.simple-tag.image { background: rgba(var(--success-rgb, 16, 185, 129), 0.1); color: var(--success-color, #10b981); }
+.simple-tag.video { background: rgba(var(--purple-rgb, 139, 92, 246), 0.1); color: var(--purple-color, #8b5cf6); }
+.simple-tag.audio { background: rgba(var(--warning-rgb, 249, 115, 22), 0.1); color: var(--warning-color, #f97316); }
 
 .recent-added-scroll {
   height: 420rpx;
@@ -676,28 +706,29 @@ defineExpose({
 /* Popup Menu Styles */
 .popup-menu {
   width: 100%;
-  background: #fff;
+  background: var(--bg-color-card, #fff);
 }
 .popup-title {
   padding: 30rpx;
   text-align: center;
   font-size: 32rpx;
   font-weight: 600;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  color: var(--text-color-primary, #1e293b);
 }
 .popup-item {
   padding: 30rpx;
   text-align: center;
   font-size: 30rpx;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
   transition: background-color 0.2s;
+  color: var(--text-color-primary, #333);
 }
 .popup-item:last-child {
   border-bottom: none;
 }
 .popup-item:active {
-  background-color: #f8fafc;
+  background-color: var(--border-color, #f8fafc);
 }
 
 /* Swipe Action Styles */
@@ -710,7 +741,7 @@ defineExpose({
   justify-content: center;
   height: 100%;
   padding: 0 32rpx;
-  background-color: #ef4444;
+  background-color: var(--danger-color, #ef4444);
   color: #ffffff;
   font-size: 28rpx;
 }

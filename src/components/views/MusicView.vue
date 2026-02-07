@@ -4,7 +4,8 @@
       <view class="section-header">
         <view class="title">我的音乐</view>
         <view class="actions">
-          <text v-if="activeTab === 'net' && netSongs.length > 0" class="action-btn" @click="toggleSelectionMode">
+          <text v-if="activeTab === 'artists'" class="action-btn" @click="showAddArtistPopup = true">添加歌手</text>
+          <text v-else-if="activeTab === 'net' && netSongs.length > 0" class="action-btn" @click="toggleSelectionMode">
             {{ isSelectionMode ? '取消' : '批量管理' }}
           </text>
           <text v-else class="action-btn" @click="playAll">播放全部</text>
@@ -65,6 +66,31 @@
       <!-- Songs Tab -->
       <swiper-item>
         <view class="tab-inner">
+          <!-- Tag Filter Bar -->
+          <view class="tag-filter-bar" v-if="availableTags.length > 0">
+            <scroll-view scroll-x class="tag-filter-scroll" :show-scrollbar="false">
+              <view class="tag-filter-content">
+                <view 
+                  class="filter-chip" 
+                  :class="{ active: currentFilterTagId === null }" 
+                  @click="applyTagFilter(null)"
+                >全部</view>
+                <view 
+                  v-for="tag in availableTags" 
+                  :key="tag.id" 
+                  class="filter-chip"
+                  :class="{ active: currentFilterTagId === tag.id }"
+                  @click="applyTagFilter(tag.id)"
+                >
+                  {{ tag.name }}
+                </view>
+                <view class="filter-chip manage-btn" @click="navigateToTagsMgmt">
+                  <wd-icon name="setting" size="14px" custom-style="color: var(--text-color-secondary, #64748b)" />
+                </view>
+              </view>
+            </scroll-view>
+          </view>
+
           <scroll-view 
             scroll-y 
             class="scroll-container" 
@@ -81,7 +107,7 @@
                 <view class="song-cover">
                   <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
                   <view v-else class="cover-placeholder">
-                    <wd-icon name="music" size="20px" color="#cbd5e1" />
+                    <wd-icon name="music" size="20px" custom-style="color: var(--text-color-placeholder, #cbd5e1)" />
                   </view>
                   <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
                     <view class="playing-icon-css">
@@ -115,10 +141,15 @@
             @scroll="(e: any) => handleScroll(e, 'artists')"
           >
           <view v-if="!searchQuery" class="artist-view">
-            <view v-if="selectedArtist" class="artist-detail">
-              <view class="artist-header" @click="selectedArtist = null">
-                <wd-icon name="arrow-left" size="20px" color="#3b5bdb"></wd-icon>
-                <text class="artist-title">{{ selectedArtist }}</text>
+            <view v-if="selectedArtistGroup" class="artist-detail">
+              <view class="artist-header">
+                <view class="header-left" @click="selectedArtistGroup = null">
+                  <wd-icon name="arrow-left" size="20px" custom-style="color: var(--primary-color, #3b5bdb)"></wd-icon>
+                  <text class="artist-title">{{ selectedArtistGroup.name }}</text>
+                </view>
+                <view class="header-right" @click="handleArtistOptions(selectedArtistGroup)">
+                  <wd-icon name="more" size="20px" custom-style="color: var(--text-color-secondary, #64748b)"></wd-icon>
+                </view>
               </view>
               <view class="music-list">
                  <view v-for="(song, index) in artistSongs" :key="song.id" class="song-item" @click="playSong(song)" @longpress="handleLongPress(song)">
@@ -128,7 +159,7 @@
                   <view class="song-cover">
                      <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
                      <view v-else class="cover-placeholder">
-                       <wd-icon name="music" size="20px" color="#cbd5e1" />
+                       <wd-icon name="music" size="20px" custom-style="color: var(--text-color-placeholder, #cbd5e1)" />
                      </view>
                      <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
                        <view class="playing-icon-css">
@@ -150,16 +181,16 @@
             </view>
         
             <view v-else class="artist-list">
-               <view v-for="artist in artistGroups" :key="artist.id" class="artist-item" @click="selectArtist(artist)">
+               <view v-for="artist in artistGroups" :key="artist.id" class="artist-item" @click="selectArtist(artist)" @longpress="handleArtistLongPress(artist)">
                  <view class="artist-icon">
                    <image v-if="artist.cover" :src="artist.cover" mode="aspectFill" class="group-cover-img" />
-                   <wd-icon v-else name="user" size="24px" color="#fff"></wd-icon>
+                   <wd-icon v-else name="user" size="24px" custom-style="color: var(--bg-color-card, #fff)"></wd-icon>
                  </view>
                  <view class="artist-info">
                    <text class="artist-name">{{ artist.name }}</text>
                    <text class="artist-count">{{ artist.count }} 首歌曲</text>
                  </view>
-                 <wd-icon name="arrow-right" size="16px" color="#94a3b8"></wd-icon>
+                 <wd-icon name="arrow-right" size="16px" custom-style="color: var(--text-color-placeholder, #94a3b8)"></wd-icon>
                </view>
              </view>
           </view>
@@ -172,7 +203,7 @@
               <view class="song-cover">
                  <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
                  <view v-else class="cover-placeholder">
-                   <wd-icon name="music" size="20px" color="#cbd5e1" />
+                   <wd-icon name="music" size="20px" custom-style="color: var(--text-color-placeholder, #cbd5e1)" />
                  </view>
                 <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
                   <view class="playing-icon-css">
@@ -208,7 +239,7 @@
           <view class="music-list" :class="{ 'selection-mode': isSelectionMode }">
             <view v-for="(song, index) in netSongs" :key="song.id" class="song-item" @click="handleSongClick(song)">
               <view v-if="isSelectionMode" class="checkbox-col" @click.stop="toggleSelection(song)">
-                <wd-icon :name="isSelected(song) ? 'check-circle-filled' : 'check-circle'" size="22px" :color="isSelected(song) ? '#3b5bdb' : '#cbd5e1'"></wd-icon>
+                <wd-icon :name="isSelected(song) ? 'check-circle-filled' : 'check-circle'" size="22px" :custom-style="'color: ' + (isSelected(song) ? 'var(--primary-color, #3b5bdb)' : 'var(--text-color-placeholder, #cbd5e1)')"></wd-icon>
               </view>
               <view class="song-index">
                 <text>{{ index + 1 }}</text>
@@ -216,7 +247,7 @@
               <view class="song-cover">
                  <image v-if="song.coverUrl" :src="song.coverUrl" mode="aspectFill" class="cover-image" />
                  <view v-else class="cover-placeholder">
-                   <wd-icon name="music" size="20px" color="#cbd5e1" />
+                   <wd-icon name="music" size="20px" custom-style="color: var(--text-color-placeholder, #cbd5e1)" />
                  </view>
                  <view v-if="audioStore.currentSong?.id === song.id" class="playing-overlay">
                    <view class="playing-icon-css">
@@ -234,7 +265,7 @@
                 <view class="song-artist">{{ song.artist }}</view>
               </view>
               <view class="song-actions" @click.stop="addToFavorites(song)">
-                 <wd-icon name="add-circle" size="24px" color="#3b5bdb"></wd-icon>
+                 <wd-icon name="add-circle" size="24px" custom-style="color: var(--primary-color, #3b5bdb)"></wd-icon>
               </view>
             </view>
             <view v-if="netSongs.length === 0" class="empty-tip">{{ searchQuery ? '未找到相关音乐' : '请输入歌名进行搜索' }}</view>
@@ -244,10 +275,53 @@
       </swiper-item>
     </swiper>
 
+    <!-- Tag Selection Popup -->
+    <wd-popup v-model="showTagPopup" position="bottom" :z-index="10000" custom-style="max-height: 70vh; border-radius: 32rpx 32rpx 0 0; overflow: hidden; display: flex; flex-direction: column;">
+      <view class="tag-popup-container">
+        <view class="popup-header">
+          <text class="popup-title">选择标签</text>
+          <view class="popup-close" @click="showTagPopup = false">
+            <wd-icon name="close" size="22px" custom-style="color: var(--text-color-secondary, #64748b)" />
+          </view>
+        </view>
+        
+        <scroll-view scroll-y class="tag-scroll-view">
+          <view class="tag-content">
+            <view v-if="availableTags.length === 0" class="empty-tags">
+              <wd-icon name="info-circle" size="32px" custom-style="color: var(--text-color-placeholder, #cbd5e1); margin-bottom: 16rpx;" />
+              <text>暂无标签，去创建一个吧</text>
+            </view>
+            
+            <view class="tag-grid">
+               <view 
+                 v-for="tag in availableTags" 
+                 :key="tag.id" 
+                 class="tag-chip" 
+                 :class="{ active: selectedTagIds.includes(tag.id) }"
+                 @click="toggleTagSelection(tag.id)"
+               >
+                 <wd-icon v-if="selectedTagIds.includes(tag.id)" name="check" size="14px" custom-style="color: #fff; margin-right: 8rpx;" />
+                 <text>{{ tag.name }}</text>
+               </view>
+               
+               <view class="tag-chip add-btn" @click="navigateToTagsMgmt">
+                 <wd-icon name="add" size="14px" custom-style="color: var(--primary-color, #3b82f6); margin-right: 8rpx;" />
+                 <text>管理标签</text>
+               </view>
+            </view>
+          </view>
+        </scroll-view>
+        
+        <view class="popup-footer">
+          <wd-button type="primary" block size="large" custom-class="confirm-btn" @click="confirmAddTags">确定 ({{ selectedTagIds.length }})</wd-button>
+        </view>
+      </view>
+    </wd-popup>
+
     <!-- Batch Action Bar -->
     <view v-if="isSelectionMode" class="batch-action-bar">
       <view class="batch-left" @click="toggleSelectAll">
-        <wd-icon :name="selectedNetSongs.length > 0 && selectedNetSongs.length === netSongs.length ? 'check-circle-filled' : 'check-circle'" size="22px" :color="selectedNetSongs.length > 0 && selectedNetSongs.length === netSongs.length ? '#3b5bdb' : '#94a3b8'"></wd-icon>
+        <wd-icon :name="selectedNetSongs.length > 0 && selectedNetSongs.length === netSongs.length ? 'check-circle-filled' : 'check-circle'" size="22px" :custom-style="'color: ' + (selectedNetSongs.length > 0 && selectedNetSongs.length === netSongs.length ? 'var(--primary-color, #3b5bdb)' : 'var(--text-color-placeholder, #94a3b8)')"></wd-icon>
         <text class="select-all-text">全选</text>
         <text class="selected-count">已选 {{ selectedNetSongs.length }} 首</text>
       </view>
@@ -270,23 +344,45 @@
     <!-- Popup Action Sheet -->
     <wd-popup 
       v-model="showActionSheet" 
-      position="center" 
-      custom-style="border-radius: 16rpx; overflow: hidden; width: 600rpx;"
+      position="bottom" 
+      custom-style="border-top-left-radius: 32rpx; border-top-right-radius: 32rpx; overflow: hidden;"
       :z-index="10000"
     >
       <view class="popup-menu">
-        <view class="popup-title">{{ actionSheetType === 'delete' ? '操作' : '选择分组' }}</view>
+        <view class="popup-title">{{ actionSheetType === 'delete' || actionSheetType === 'options' ? '操作' : '选择分组' }}</view>
         <scroll-view scroll-y style="max-height: 600rpx;">
-          <view 
-            v-for="(action, index) in actionSheetActions" 
-            :key="index" 
-            class="popup-item" 
-            :style="{ color: action.color || '#333' }"
-            @click="handleActionSelect({ item: action })"
-          >
-            {{ action.name }}
-          </view>
+          <block v-for="(action, index) in actionSheetActions" :key="index">
+            <view 
+              class="popup-item" 
+          :style="{ color: action.color || 'var(--text-color-primary, #334155)' }"
+          @click="handleActionSelect({ item: action })"
+        >
+              {{ action.name }}
+            </view>
+          </block>
         </scroll-view>
+        <view class="popup-item cancel" @click="showActionSheet = false">取消</view>
+      </view>
+    </wd-popup>
+
+    <!-- Add Artist Popup -->
+    <wd-popup v-model="showAddArtistPopup" position="center" :z-index="10000" custom-style="border-radius: 16rpx; width: 80%; overflow: hidden; background-color: var(--bg-color-card, #fff);">
+      <view class="dialog-container">
+        <view class="dialog-header">
+          <text class="dialog-title">添加歌手</text>
+        </view>
+        <view class="dialog-content">
+          <input 
+            class="dialog-input" 
+            v-model="newArtistName" 
+            placeholder="请输入歌手名字" 
+            :focus="showAddArtistPopup"
+          />
+        </view>
+        <view class="dialog-footer">
+          <view class="dialog-btn cancel" @click="showAddArtistPopup = false">取消</view>
+          <view class="dialog-btn confirm" @click="handleAddArtist">创建</view>
+        </view>
       </view>
     </wd-popup>
   </view>
@@ -333,6 +429,7 @@ interface Song {
 const songs = ref<Song[]>([])
 const netSongs = ref<Song[]>([])
 const searchQuery = ref('')
+const currentFilterTagId = ref<number | null>(null)
 const activeTab = ref<'songs' | 'artists' | 'net'>('songs')
 
 // Computed index for swiper
@@ -347,7 +444,7 @@ const handleSwiperChange = (e: any) => {
   activeTab.value = map[index] || 'songs'
 }
 
-const selectedArtist = ref<string | null>(null)
+const selectedArtistGroup = ref<any | null>(null)
 const isSelectionMode = ref(false)
 const selectedNetSongs = ref<Song[]>([])
 const scrollIntoViewId = ref('')
@@ -357,16 +454,41 @@ let searchTimer: any = null
 const showActionSheet = ref(false)
 const actionSheetActions = ref<any[]>([])
 const currentActionSong = ref<Song | null>(null)
-const actionSheetType = ref<'delete' | 'addToGroup' | 'batchAddToGroup'>('delete')
+const currentActionArtist = ref<any>(null)
+const actionSheetType = ref<'delete' | 'addToGroup' | 'batchAddToGroup' | 'options' | 'deleteArtist'>('delete')
 
 const artistGroups = ref<any[]>([])
 const artistSongs = ref<Song[]>([])
 
+const showAddArtistPopup = ref(false)
+const newArtistName = ref('')
+
+const handleAddArtist = async () => {
+  if (!newArtistName.value.trim()) {
+    uni.showToast({ title: '请输入歌手名字', icon: 'none' })
+    return
+  }
+  
+  try {
+    await request('/audio-groups', 'POST', {
+      name: newArtistName.value.trim()
+    })
+    uni.showToast({ title: '添加成功', icon: 'success' })
+    showAddArtistPopup.value = false
+    newArtistName.value = ''
+    fetchArtistGroups() // Refresh list
+  } catch (e) {
+    console.error(e)
+    uni.showToast({ title: '添加失败', icon: 'none' })
+  }
+}
+
+
 const fetchArtistGroups = async () => {
   try {
-    const data = await request('/audio-groups')
-    if (Array.isArray(data)) {
-      artistGroups.value = data.map((item: any) => ({
+    const res = await request('/audio-groups')
+    if (res.ok) {
+      artistGroups.value = res.list.map((item: any) => ({
         id: item.id,
         name: item.name,
         count: item.audioCount || 0,
@@ -410,7 +532,7 @@ const fetchSongsByGroup = async (groupId: string | number) => {
 watch(activeTab, (newVal) => {
   // Clear search query when switching tabs to avoid empty views due to filtering
   searchQuery.value = ''
-  selectedArtist.value = null
+  selectedArtistGroup.value = null
   isSelectionMode.value = false // Reset selection mode when switching tabs
   
   if (newVal === 'artists') {
@@ -424,7 +546,7 @@ watch(activeTab, (newVal) => {
 })
 
 const selectArtist = (artistGroup: any) => {
-  selectedArtist.value = artistGroup.name
+  selectedArtistGroup.value = artistGroup
   fetchSongsByGroup(artistGroup.id)
 }
 
@@ -488,8 +610,22 @@ const fetchCoversForList = async () => {
 
 const fetchSongs = async () => {
   try {
-    const q = searchQuery.value ? `?q=${encodeURIComponent(searchQuery.value)}` : ''
-    const data = await request(`/audios${q}`)
+    let url = '/audios'
+    const params: string[] = []
+    
+    if (searchQuery.value) {
+      params.push(`q=${encodeURIComponent(searchQuery.value)}`)
+    }
+    
+    if (currentFilterTagId.value !== null) {
+      params.push(`tag_id=${currentFilterTagId.value}`)
+    }
+    
+    if (params.length > 0) {
+      url += '?' + params.join('&')
+    }
+
+    const data = await request(url)
     const list = Array.isArray(data) ? data : []
     songs.value = list.map((item: any) => ({
       id: item.id,
@@ -502,6 +638,12 @@ const fetchSongs = async () => {
   } catch (error) {
     console.error('Failed to fetch music:', error)
   }
+}
+
+const applyTagFilter = (tagId: number | null) => {
+  if (currentFilterTagId.value === tagId) return
+  currentFilterTagId.value = tagId
+  fetchSongs()
 }
 
 const handleSearchInput = () => {
@@ -560,9 +702,9 @@ const addToFavorites = async (song: Song) => {
   // 2. Fetch available groups
   let groups: any[] = []
   try {
-    const data = await request('/audio-groups')
-    if (Array.isArray(data)) {
-      groups = data
+    const res = await request('/audio-groups')
+    if (res.ok) {
+      groups = res.list
     }
   } catch (e) {
     console.error('Fetch groups failed', e)
@@ -580,29 +722,128 @@ const addToFavorites = async (song: Song) => {
   showActionSheet.value = true
 }
 
+const showTagPopup = ref(false)
+const availableTags = ref<any[]>([])
+const selectedTagIds = ref<number[]>([])
+
+const fetchTags = async () => {
+  try {
+    const res = await request('/tags?type=audio')
+    if (res.ok) {
+      availableTags.value = res.list
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const toggleTagSelection = (tagId: number) => {
+  if (selectedTagIds.value.includes(tagId)) {
+    selectedTagIds.value = selectedTagIds.value.filter(id => id !== tagId)
+  } else {
+    selectedTagIds.value.push(tagId)
+  }
+}
+
+const navigateToTagsMgmt = () => {
+  uni.navigateTo({ url: '/pages/settings/tags' })
+  showTagPopup.value = false
+}
+
+const confirmAddTags = async () => {
+  const contentIds = currentActionSong.value ? [currentActionSong.value.id] : selectedNetSongs.value.map(s => s.id)
+  
+  if (contentIds.length === 0) return
+  
+  try {
+    await request('/tags/content', 'POST', {
+      type: 'audio',
+      id: contentIds,
+      tagIds: selectedTagIds.value
+    })
+    uni.showToast({ title: '添加成功', icon: 'success' })
+    showTagPopup.value = false
+  } catch (e) {
+    uni.showToast({ title: '添加失败', icon: 'none' })
+  }
+}
+
 const handleLongPress = (song: Song) => {
-  currentActionSong.value = song
-  actionSheetType.value = 'delete'
-  actionSheetActions.value = [
-    { name: '删除', color: '#fa4350' }
-  ]
-  showActionSheet.value = true
+    currentActionSong.value = song
+    actionSheetType.value = 'options'
+    actionSheetActions.value = [
+      { name: '添加标签', id: 'tag' },
+      { name: '删除', color: 'var(--danger-color, #fa4350)', id: 'delete' }
+    ]
+    showActionSheet.value = true
+  }
+
+const handleArtistLongPress = (artist: any) => {
+    currentActionArtist.value = artist
+    actionSheetType.value = 'deleteArtist'
+    actionSheetActions.value = [
+      { name: '删除歌手', color: 'var(--danger-color, #fa4350)', id: 'delete' }
+    ]
+    showActionSheet.value = true
+}
+
+const handleArtistOptions = (artist: any) => {
+  handleArtistLongPress(artist)
 }
 
 const handleActionSelect = async ({ item }: any) => {
   showActionSheet.value = false
 
-  if (actionSheetType.value === 'delete') {
+  if (actionSheetType.value === 'options') {
     if (!currentActionSong.value) return
-    if (item.name === '删除') {
+    if (item.id === 'delete') {
       deleteSong(currentActionSong.value)
+    } else if (item.id === 'tag') {
+      // Fetch tags and show popup
+      await fetchTags()
+      // Fetch existing tags for this song?
+      // Ideally yes, but for now let's just show all tags to add.
+      // Or reset selection
+      selectedTagIds.value = []
+      try {
+        const res = await request(`/tags/content?type=audio&id=${currentActionSong.value.id}`)
+        if (res.ok) {
+           selectedTagIds.value = res.list.map((t: any) => t.id)
+        }
+      } catch(e) {}
+      
+      showTagPopup.value = true
     }
   } else if (actionSheetType.value === 'addToGroup') {
     if (!currentActionSong.value) return
     await saveNetSong(currentActionSong.value, item.id)
   } else if (actionSheetType.value === 'batchAddToGroup') {
     await batchSaveNetSongs(item.id)
+  } else if (actionSheetType.value === 'deleteArtist') {
+    if (!currentActionArtist.value) return
+    if (item.id === 'delete') {
+      confirmDeleteArtist(currentActionArtist.value)
+    }
   }
+}
+
+const confirmDeleteArtist = (artist: any) => {
+  uni.showModal({
+    title: '提示',
+    content: `确定要删除歌手 "${artist.name}" 吗？该操作只会删除分组，不会删除歌曲。`,
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await request(`/audio-groups/${artist.id}`, 'DELETE')
+          uni.showToast({ title: '删除成功', icon: 'success' })
+          fetchArtistGroups() // Refresh list
+        } catch (e) {
+          console.error(e)
+          uni.showToast({ title: '删除失败', icon: 'none' })
+        }
+      }
+    }
+  })
 }
 
 const deleteSong = async (song: Song) => {
@@ -615,10 +856,9 @@ const deleteSong = async (song: Song) => {
           await request(`/audios/${song.id}`, 'DELETE')
           uni.showToast({ title: '删除成功', icon: 'success' })
           
-          if (activeTab.value === 'artists' && selectedArtist.value) {
+          if (activeTab.value === 'artists' && selectedArtistGroup.value) {
             // Re-fetch current artist's songs
-            const group = artistGroups.value.find(g => g.name === selectedArtist.value)
-            if (group) fetchSongsByGroup(group.id)
+            fetchSongsByGroup(selectedArtistGroup.value.id)
           } else {
             fetchSongs()
           }
@@ -694,9 +934,9 @@ const batchAddToGroup = async () => {
   // Fetch available groups
   let groups: any[] = []
   try {
-    const data = await request('/audio-groups')
-    if (Array.isArray(data)) {
-      groups = data
+    const res = await request('/audio-groups')
+    if (res.ok) {
+      groups = res.list
     }
   } catch (e) {
     console.error('Fetch groups failed', e)
@@ -722,7 +962,7 @@ const saveNetSong = async (song: Song, groupId: string | null) => {
     // Download cover to get a temp path or use URL directly if backend supports it
     // Assuming backend takes URL
     
-    await request('/audios', 'POST', {
+    await request('/audios/link', 'POST', {
       filename: song.name, // We use filename as title usually
       singer: song.artist,
       url: song.url,
@@ -748,7 +988,7 @@ const batchSaveNetSongs = async (groupId: string | null) => {
     try {
       const hasDetails = await ensureSongDetails(song)
       if (hasDetails) {
-        await request('/audios', 'POST', {
+        await request('/audios/link', 'POST', {
           filename: song.name,
           singer: song.artist,
           url: song.url,
@@ -771,6 +1011,7 @@ const batchSaveNetSongs = async (groupId: string | null) => {
 
 onMounted(() => {
   fetchSongs()
+  fetchTags()
 })
 </script>
 
@@ -779,48 +1020,109 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-color, #f8fafc);
 }
+
+/* Header Styles */
 .fixed-header {
-  background: #ffffff;
-  padding: 24rpx 24rpx 0 24rpx;
-  border-top-left-radius: 16rpx;
-  border-top-right-radius: 16rpx;
+  position: sticky;
+  top: 0;
   z-index: 10;
+  background: var(--bg-color-card, rgba(255, 255, 255, 0.95));
+  backdrop-filter: blur(10px);
+  padding: 24rpx 24rpx 0 24rpx;
 }
+
+/* Tag Filter Bar */
+.tag-filter-bar {
+  padding: 16rpx 24rpx;
+  background: var(--bg-color-card, #fff);
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+}
+.tag-filter-scroll {
+  white-space: nowrap;
+  width: 100%;
+}
+.tag-filter-content {
+  display: inline-flex;
+  align-items: center;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx 24rpx;
+  background: var(--bg-color, #f1f5f9);
+  border-radius: 100rpx;
+  font-size: 26rpx;
+  color: var(--text-color-secondary, #64748b);
+  margin-right: 16rpx;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.filter-chip.active {
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary-color, #3b82f6);
+  border-color: rgba(var(--primary-rgb), 0.3);
+  font-weight: 500;
+}
+.filter-chip.manage-btn {
+  padding: 10rpx 20rpx;
+  background: var(--bg-color, #f8fafc);
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24rpx;
+  margin-bottom: 32rpx;
+  padding-top: 12rpx;
 }
 .title {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--text-color-primary, #1e293b);
+  letter-spacing: -0.5px;
 }
 .actions {
   display: flex;
-  gap: 16rpx;
+  gap: 24rpx;
 }
 .action-btn {
   font-size: 28rpx;
-  color: #3b82f6;
-}
-.search-box {
-  background: #f1f5f9;
+  color: var(--primary-color, #3b82f6);
+  font-weight: 500;
+  padding: 8rpx 16rpx;
+  background: rgba(var(--primary-rgb), 0.1);
   border-radius: 12rpx;
-  padding: 16rpx 24rpx;
+}
+.action-btn:active {
+  background: rgba(var(--primary-rgb), 0.2);
+}
+
+/* Search Box */
+.search-box {
+  background: var(--bg-color, #f1f5f9);
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
   display: flex;
   align-items: center;
   margin-bottom: 24rpx;
+  transition: all 0.3s ease;
+}
+.search-box:active {
+  background: var(--border-color, #e2e8f0);
 }
 .search-input {
   flex: 1;
-  font-size: 28rpx;
-  color: #1e293b;
+  font-size: 30rpx;
+  color: var(--text-color-primary, #1e293b);
+  margin-right: 16rpx;
 }
 .search-icon {
-  font-size: 28rpx;
-  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 :deep(.fab-action-btn) {
@@ -835,56 +1137,53 @@ onMounted(() => {
 /* Custom Tabs Styles */
 .custom-tabs {
   display: flex;
-  background: #fff;
-  border-bottom: 1px solid #f1f5f9;
+  background: transparent;
+  padding: 0 24rpx;
+  margin-top: 16rpx;
   z-index: 10;
 }
 .custom-tab-item {
   flex: 1;
   text-align: center;
   padding: 24rpx 0;
-  font-size: 28rpx;
-  color: #64748b;
+  font-size: 30rpx;
+  color: var(--text-color-secondary, #64748b);
   position: relative;
   font-weight: 500;
+  transition: all 0.3s;
 }
 .custom-tab-item.active {
-  color: #3b82f6;
-  font-weight: 600;
+  color: var(--text-color-primary, #0f172a);
+  font-weight: 700;
+  font-size: 32rpx;
 }
 .tab-indicator {
   position: absolute;
-  bottom: 0;
+  bottom: 12rpx;
   left: 50%;
   transform: translateX(-50%);
-  width: 40rpx;
-  height: 4rpx;
-  background: #3b82f6;
-  border-radius: 2rpx;
+  width: 32rpx;
+  height: 6rpx;
+  background: var(--primary-color, #3b82f6);
+  border-radius: 4rpx;
+  box-shadow: 0 2rpx 8rpx rgba(var(--primary-rgb), 0.4);
 }
 
 /* Swiper Styles */
 .content-swiper {
   flex: 1;
-  height: 0; /* Critical for flex expansion */
+  height: 0;
   width: 100%;
-  overflow: hidden;
 }
 .content-swiper swiper-item {
   height: 100%;
   width: 100%;
-  overflow: hidden;
-  position: relative;
 }
-
 .tab-inner {
   height: 100%;
   width: 100%;
-  background-color: #fff;
   display: flex;
   flex-direction: column;
-  position: relative;
-  overflow: hidden;
 }
 .scroll-container {
   flex: 1;
@@ -892,64 +1191,79 @@ onMounted(() => {
   width: 100%;
 }
 
+/* Music List */
 .music-list {
-  padding: 0 0 24rpx 0;
+  padding: 16rpx 24rpx 180rpx 24rpx; /* Bottom padding for FAB/Player */
 }
 .song-item {
   display: flex;
   align-items: center;
-  padding: 16rpx 24rpx;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  background: var(--bg-color-card, #ffffff);
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.02);
+  transition: transform 0.1s, background-color 0.2s;
 }
 .song-item:active {
-  background-color: #f8fafc;
+  transform: scale(0.98);
+  background-color: var(--bg-color, #f8fafc);
 }
 .song-index {
-  width: 60rpx;
+  width: 50rpx;
   text-align: center;
-  color: #94a3b8;
-  font-size: 28rpx;
+  color: var(--text-color-placeholder, #94a3b8);
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-right: 8rpx;
+  font-style: italic;
 }
+/* Top 3 Highlighting */
+.song-item:nth-child(1) .song-index { color: var(--warning-color, #fbbf24); }
+.song-item:nth-child(2) .song-index { color: var(--text-color-secondary, #94a3b8); }
+.song-item:nth-child(3) .song-index { color: var(--danger-color, #f59e0b); }
+
 .song-cover {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 8rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 16rpx;
   overflow: hidden;
-  background: #f1f5f9;
+  background: var(--bg-color, #f1f5f9);
   margin-right: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
   flex-shrink: 0;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08);
 }
 .cover-image {
   width: 100%;
   height: 100%;
+  transition: transform 0.3s;
 }
 .song-info {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .name-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 4rpx;
+  margin-bottom: 8rpx;
 }
 .song-name {
-  font-size: 28rpx;
-  color: #1e293b;
-  font-weight: 500;
+  font-size: 32rpx;
+  color: var(--text-color-primary, #1e293b);
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .song-name.active {
-  color: #3b82f6;
+  color: var(--primary-color, #3b82f6);
 }
 .song-artist {
-  font-size: 24rpx;
-  color: #64748b;
+  font-size: 26rpx;
+  color: var(--text-color-secondary, #64748b);
+  font-weight: 400;
 }
 .playing-overlay {
   position: absolute;
@@ -957,7 +1271,8 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -967,64 +1282,87 @@ onMounted(() => {
 .playing-icon-css {
   display: flex;
   align-items: flex-end;
-  height: 12px;
-  gap: 2px;
+  height: 16px;
+  gap: 3px;
 }
 .playing-icon-css .line {
-  width: 2px;
+  width: 3px;
   background-color: #fff;
+  border-radius: 2px;
   animation: equalize 1s infinite;
 }
-.playing-icon-css .line1 { animation-delay: 0.2s; height: 6px; }
-.playing-icon-css .line2 { animation-delay: 0.4s; height: 10px; }
-.playing-icon-css .line3 { animation-delay: 0.6s; height: 8px; }
-.playing-icon-css .line4 { animation-delay: 0.8s; height: 5px; }
+.playing-icon-css .line1 { animation-delay: 0.2s; height: 8px; }
+.playing-icon-css .line2 { animation-delay: 0.4s; height: 14px; }
+.playing-icon-css .line3 { animation-delay: 0.6s; height: 10px; }
+.playing-icon-css .line4 { animation-delay: 0.8s; height: 6px; }
 
 @keyframes equalize {
   0% { height: 4px; }
-  50% { height: 12px; }
+  50% { height: 100%; }
   100% { height: 4px; }
 }
 
 .empty-tip {
   text-align: center;
-  color: #94a3b8;
-  padding: 40rpx 0;
-  font-size: 28rpx;
+  color: var(--text-color-placeholder, #94a3b8);
+  padding: 60rpx 0;
+  font-size: 30rpx;
 }
 
 /* Artist View */
 .artist-header {
   display: flex;
   align-items: center;
-  padding: 16rpx 24rpx;
+  justify-content: space-between;
+  padding: 24rpx;
+  background: var(--bg-color-card, #fff);
+  position: sticky;
+  top: 0;
+  z-index: 5;
   margin-bottom: 16rpx;
-  gap: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02);
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+.header-right {
+  padding: 8rpx;
 }
 .artist-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--text-color-primary, #1e293b);
+  margin-left: 16rpx;
 }
 .artist-list {
-  padding: 0 0 24rpx 0;
+  padding: 16rpx 24rpx;
 }
 .artist-item {
   display: flex;
   align-items: center;
-  padding: 24rpx 24rpx;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  background: var(--bg-color-card, #fff);
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.02);
+}
+.artist-item:active {
+  transform: scale(0.99);
+  background: var(--bg-color, #f8fafc);
 }
 .artist-icon {
-  width: 80rpx;
-  height: 80rpx;
+  width: 100rpx;
+  height: 100rpx;
   border-radius: 50%;
-  background: #cbd5e1;
+  background: var(--border-color, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 24rpx;
+  margin-right: 32rpx;
   overflow: hidden;
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1);
 }
 .group-cover-img {
   width: 100%;
@@ -1035,14 +1373,14 @@ onMounted(() => {
 }
 .artist-name {
   display: block;
-  font-size: 30rpx;
-  color: #1e293b;
-  font-weight: 500;
-  margin-bottom: 4rpx;
+  font-size: 32rpx;
+  color: var(--text-color-primary, #1e293b);
+  font-weight: 600;
+  margin-bottom: 8rpx;
 }
 .artist-count {
-  font-size: 24rpx;
-  color: #94a3b8;
+  font-size: 26rpx;
+  color: var(--text-color-secondary, #64748b);
 }
 
 /* Net Music Selection */
@@ -1053,86 +1391,244 @@ onMounted(() => {
 }
 .batch-action-bar {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  padding: 20rpx 30rpx;
+  bottom: 110rpx; /* Lift above tab bar */
+  left: 24rpx;
+  right: 24rpx;
+  background: var(--bg-color-glass, rgba(255, 255, 255, 0.95));
+  backdrop-filter: blur(10px);
+  padding: 24rpx 32rpx;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.05);
-  z-index: 100;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.12);
+  z-index: 1000;
+  border-radius: 48rpx;
 }
 .batch-left {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 .select-all-text {
-  font-size: 28rpx;
-  color: #333;
+  font-size: 30rpx;
+  color: var(--text-color-primary, #1e293b);
+  font-weight: 500;
 }
 .selected-count {
-  font-size: 24rpx;
-  color: #999;
+  font-size: 26rpx;
+  color: var(--text-color-secondary, #64748b);
 }
 .batch-btn {
-  padding: 12rpx 32rpx;
-  border-radius: 30rpx;
-  font-size: 28rpx;
+  padding: 16rpx 40rpx;
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  font-weight: 600;
   color: #fff;
-  background: #3b82f6;
+  background: var(--primary-color, #3b82f6);
+  box-shadow: 0 4rpx 12rpx rgba(var(--primary-rgb), 0.3);
+  transition: all 0.3s;
+}
+.batch-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 6rpx rgba(var(--primary-rgb), 0.2);
 }
 .batch-btn.disabled {
-  background: #cbd5e1;
+  background: var(--text-color-placeholder, #cbd5e1);
+  box-shadow: none;
+  color: var(--bg-color, #f1f5f9);
 }
 
 /* Locate FAB */
 .locate-fab {
   position: absolute;
   right: 32rpx;
-  bottom: 120rpx;
-  width: 80rpx;
-  height: 80rpx;
-  background: #fff;
+  bottom: 160rpx;
+  width: 96rpx;
+  height: 96rpx;
+  background: var(--bg-color-card, #fff);
   border-radius: 50%;
-  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1);
+  box-shadow: 0 8rpx 24rpx rgba(0,0,0,0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 90;
+  transition: transform 0.2s;
+}
+.locate-fab:active {
+  transform: scale(0.9);
 }
 .locate-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 48rpx;
+  height: 48rpx;
 }
 
-/* Popup Menu */
+/* Popup Menu Styles */
 .popup-menu {
   width: 100%;
-  background: #fff;
+  background: var(--bg-color-card, #fff);
+  border-top-left-radius: 32rpx;
+  border-top-right-radius: 32rpx;
+  overflow: hidden;
 }
 .popup-title {
-  padding: 30rpx;
+  padding: 32rpx;
   text-align: center;
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 600;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  color: var(--text-color-primary, #1e293b);
+  background: var(--bg-color, #f8fafc);
 }
 .popup-item {
-  padding: 30rpx;
+  padding: 32rpx;
   text-align: center;
-  font-size: 30rpx;
-  border-bottom: 1px solid #f1f5f9;
+  font-size: 32rpx;
   transition: background-color 0.2s;
+  color: var(--text-color-primary, #334155);
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
 }
 .popup-item:last-child {
   border-bottom: none;
 }
 .popup-item:active {
-  background-color: #f8fafc;
+  background-color: var(--bg-color, #f1f5f9);
+  color: var(--text-color-primary, #0f172a);
+}
+.popup-item.cancel {
+  border-top: 8rpx solid var(--border-color, #f1f5f9);
+  color: var(--text-color-secondary, #64748b);
+  margin-top: -1px;
+}
+
+/* Tag Selection Popup Styles */
+.tag-popup-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-color-card, #fff);
+}
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 2rpx solid var(--border-color, #f1f5f9);
+}
+.popup-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-color-primary, #1e293b);
+}
+.popup-close {
+  padding: 8rpx;
+  margin-right: -8rpx;
+}
+.tag-scroll-view {
+  max-height: 50vh;
+  width: 100%;
+}
+.tag-content {
+  padding: 32rpx;
+}
+.tag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 32rpx;
+  background: var(--bg-color, #f1f5f9);
+  border-radius: 100rpx;
+  font-size: 28rpx;
+  color: var(--text-color-secondary, #475569);
+  transition: all 0.2s;
+  border: 2rpx solid transparent;
+}
+.tag-chip.active {
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
+  box-shadow: 0 4rpx 12rpx rgba(var(--primary-rgb), 0.3);
+  transform: scale(1.02);
+}
+.tag-chip.add-btn {
+  background: var(--bg-color-card, #fff);
+  border: 2rpx dashed var(--text-color-placeholder, #cbd5e1);
+  color: var(--primary-color, #3b82f6);
+}
+.tag-chip.add-btn:active {
+  background: var(--bg-color, #f8fafc);
+  border-color: var(--primary-color, #3b82f6);
+}
+.empty-tags {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+  color: var(--text-color-placeholder, #94a3b8);
+  font-size: 28rpx;
+}
+.popup-footer {
+  padding: 24rpx 32rpx;
+  background: var(--bg-color-card, #fff);
+  border-top: 2rpx solid var(--border-color, #f1f5f9);
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+/* Add Artist Dialog Styles */
+.dialog-container {
+  padding: 40rpx;
+  background: var(--bg-color-card, #fff);
+  width: 100%;
+  box-sizing: border-box;
+}
+.dialog-header {
+  margin-bottom: 40rpx;
+}
+.dialog-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  text-align: center;
+  display: block;
+  color: var(--text-color-primary, #1e293b);
+}
+.dialog-content {
+  padding: 0;
+}
+.dialog-input {
+  width: 100%;
+  height: 88rpx;
+  background: var(--border-color, #f1f5f9);
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  font-size: 30rpx;
+  box-sizing: border-box;
+  margin-bottom: 40rpx;
+  color: var(--text-color-primary, #1e293b);
+}
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+.dialog-btn {
+  flex: 1;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.dialog-btn.cancel {
+  background: var(--border-color, #f1f5f9);
+  color: var(--text-color-secondary, #94a3b8);
+}
+.dialog-btn.confirm {
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
 }
 </style>

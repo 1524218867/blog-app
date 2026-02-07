@@ -102,7 +102,7 @@ onMounted(() => {
 
 .update-modal {
   width: 600rpx;
-  background-color: #fff;
+  background-color: var(--bg-color-card, #fff);
   border-radius: 24rpx;
   padding: 50rpx 40rpx;
   display: flex;
@@ -121,14 +121,14 @@ onMounted(() => {
 .title {
   font-size: 38rpx;
   font-weight: bold;
-  color: #333;
+  color: var(--text-color-primary, #333);
 }
 
 .version {
   font-size: 24rpx;
-  color: #007aff;
+  color: var(--primary-color, #007aff);
   margin-top: 12rpx;
-  background-color: rgba(0, 122, 255, 0.1);
+  background-color: rgba(var(--primary-rgb), 0.1);
   padding: 4rpx 16rpx;
   border-radius: 20rpx;
 }
@@ -137,7 +137,7 @@ onMounted(() => {
   width: 100%;
   max-height: 400rpx;
   margin-bottom: 50rpx;
-  background-color: #f9f9f9;
+  background-color: var(--bg-color, #f9f9f9);
   padding: 20rpx;
   border-radius: 12rpx;
   box-sizing: border-box;
@@ -145,7 +145,7 @@ onMounted(() => {
 
 .note {
   font-size: 28rpx;
-  color: #666;
+  color: var(--text-color-secondary, #666);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -161,7 +161,7 @@ onMounted(() => {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  background: linear-gradient(90deg, #007aff, #00c6ff);
+  background: var(--primary-color, #007aff);
   color: #fff;
   border-radius: 44rpx;
   font-size: 32rpx;
@@ -175,7 +175,7 @@ onMounted(() => {
   height: 88rpx;
   line-height: 88rpx;
   background-color: transparent;
-  color: #999;
+  color: var(--text-color-placeholder, #999);
   font-size: 28rpx;
 }
 
@@ -186,7 +186,7 @@ onMounted(() => {
 .progress-box {
   width: 100%;
   height: 16rpx;
-  background-color: #eee;
+  background-color: var(--border-color, #eee);
   border-radius: 8rpx;
   margin-bottom: 24rpx;
   overflow: hidden;
@@ -194,7 +194,7 @@ onMounted(() => {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #007aff, #00c6ff);
+  background: var(--primary-color, #007aff);
   transition: width 0.3s ease;
 }
 

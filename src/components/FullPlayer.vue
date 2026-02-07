@@ -36,10 +36,17 @@
           >歌词</text>
         </view>
 
-        <!-- Timer Button -->
-        <view class="timer-btn" @click="showTimerPopup = true">
-          <wd-icon name="time" size="44rpx" :color="audioStore.timerRemaining > 0 ? '#4CD964' : '#fff'" />
-          <text v-if="audioStore.timerRemaining > 0" class="timer-text">{{ formatTime(audioStore.timerRemaining) }}</text>
+        <!-- Header Actions -->
+        <view class="header-actions">
+          <view class="action-btn" @click="audioStore.showDesktopLyric = !audioStore.showDesktopLyric">
+             <view class="lyric-icon" :class="{ active: audioStore.showDesktopLyric }">词</view>
+          </view>
+          
+          <!-- Timer Button -->
+          <view class="action-btn" @click="showTimerPopup = true">
+            <wd-icon name="time" size="44rpx" :color="audioStore.timerRemaining > 0 ? 'var(--success-color, #4CD964)' : '#fff'" />
+            <text v-if="audioStore.timerRemaining > 0" class="timer-text">{{ formatTime(audioStore.timerRemaining) }}</text>
+          </view>
         </view>
       </view>
 
@@ -176,7 +183,7 @@
                 @click="selectTimer(item.value)"
               >
                 <text class="timer-text">{{ item.label }}</text>
-                <wd-icon v-if="audioStore.timerDuration === item.value" name="check" size="40rpx" color="#4CD964" />
+                <wd-icon v-if="audioStore.timerDuration === item.value" name="check" size="40rpx" custom-style="color: var(--success-color, #4CD964)" />
               </view>
             </view>
             <view class="popup-close" @click="showTimerPopup = false">关闭</view>
@@ -461,12 +468,46 @@ watch(showLyrics, (val) => {
   font-weight: bold;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.action-btn {
+  height: 60rpx;
+  min-width: 60rpx;
+  padding: 0 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 30rpx;
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
+}
+
+.lyric-icon {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: bold;
+}
+
+.lyric-icon.active {
+  color: #fff;
+}
+
+.timer-text {
+  font-size: 24rpx;
+  color: #fff;
+  margin-left: 8rpx;
+}
+
 .tab-switcher {
   flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-right: 90rpx; /* Balance the back button width */
 }
 
 .tab-item {
@@ -677,7 +718,7 @@ watch(showLyrics, (val) => {
   align-items: center;
   justify-content: space-between;
   padding: 30rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--border-color, #f5f5f5);
 }
 
 .timer-item:last-child {
@@ -686,11 +727,11 @@ watch(showLyrics, (val) => {
 
 .timer-item .timer-text {
   font-size: 30rpx;
-  color: #333;
+  color: var(--text-color-primary, #333);
 }
 
 .timer-item.active .timer-text {
-  color: #4CD964;
+  color: var(--success-color, #4CD964);
 }
 
 .loading-overlay {
@@ -728,7 +769,7 @@ watch(showLyrics, (val) => {
   left: 0;
   right: 0;
   height: 60%;
-  background: #fff;
+  background: var(--bg-color-card, #fff);
   border-radius: 40rpx 40rpx 0 0;
   transform: translateY(100%);
   transition: transform 0.3s;
@@ -746,13 +787,13 @@ watch(showLyrics, (val) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1rpx solid #eee;
+  border-bottom: 1rpx solid var(--border-color, #eee);
 }
 
 .popup-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #333;
+  color: var(--text-color-primary, #333);
 }
 
 .popup-mode {
@@ -769,7 +810,7 @@ watch(showLyrics, (val) => {
 
 .mode-text {
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-color-secondary, #666);
 }
 
 .popup-list {
@@ -782,12 +823,12 @@ watch(showLyrics, (val) => {
   justify-content: space-between;
   align-items: center;
   padding: 24rpx 30rpx;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--border-color, #f5f5f5);
 }
 
 .popup-item.active .item-name,
 .popup-item.active .item-artist {
-  color: #007aff;
+  color: var(--primary-color, #007aff);
 }
 
 .item-info {
@@ -799,12 +840,12 @@ watch(showLyrics, (val) => {
 
 .item-name {
   font-size: 30rpx;
-  color: #333;
+  color: var(--text-color-primary, #333);
 }
 
 .item-artist {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-color-secondary, #999);
 }
 
 .item-action {
@@ -814,7 +855,7 @@ watch(showLyrics, (val) => {
 
 .remove-icon {
   font-size: 40rpx;
-  color: #999;
+  color: var(--text-color-secondary, #999);
   line-height: 1;
 }
 
@@ -822,7 +863,7 @@ watch(showLyrics, (val) => {
   padding: 30rpx;
   text-align: center;
   font-size: 32rpx;
-  color: #333;
-  border-top: 1rpx solid #eee;
+  color: var(--text-color-primary, #333);
+  border-top: 1rpx solid var(--border-color, #eee);
 }
 </style>
